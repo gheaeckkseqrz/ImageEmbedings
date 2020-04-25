@@ -1,8 +1,10 @@
+#pragma once
+
 #include <torch/torch.h>
 
 struct FeatureExtractor : torch::nn::Module
 {
-  FeatureExtractor(unsigned int nc)
+  FeatureExtractor(unsigned int nc, unsigned int nz)
     {
       _c1  = register_module("c1",  torch::nn::Conv2d(torch::nn::Conv2dOptions(  3,  nc*1, 3).padding(1).stride(1).bias(true)));
       _c2  = register_module("c2",  torch::nn::Conv2d(torch::nn::Conv2dOptions(nc*1, nc*1, 3).padding(1).stride(1).bias(true)));
@@ -31,6 +33,11 @@ struct FeatureExtractor : torch::nn::Module
       _n11  = register_module("n11", torch::nn::InstanceNorm2d(nc * 8));
       _n12  = register_module("n12", torch::nn::InstanceNorm2d(nc * 8));
       _n13  = register_module("n13", torch::nn::InstanceNorm2d(nc * 8));
+
+      _f = register_module("f", torch::nn::Flatten());
+
+      _fc1 = register_module("fc1", torch::nn::Linear(nc * 8 * 16 * 16, 256));
+      _fc2 = register_module("fc2", torch::nn::Linear(256, nz));
     }
 
   torch::Tensor forward(torch::Tensor x)
@@ -60,6 +67,13 @@ struct FeatureExtractor : torch::nn::Module
       x = _n12(torch::relu(_c12(x)));
       x = torch::dropout(x, 0.5, is_training());
       x = _n13(torch::relu(_c13(x)));
+
+      x = _f(x);
+
+      x = torch::relu(_fc1(x));
+      x = torch::dropout(x, 0.5, is_training());
+      x = _fc2(x);
+
       return x;
     }
 
@@ -91,4 +105,9 @@ struct FeatureExtractor : torch::nn::Module
   torch::nn::InstanceNorm2d _n11 = nullptr;
   torch::nn::InstanceNorm2d _n12 = nullptr;
   torch::nn::InstanceNorm2d _n13 = nullptr;
+
+  torch::nn::Flatten _f = nullptr;
+
+  torch::nn::Linear _fc1 = nullptr;
+  torch::nn::Linear _fc2 = nullptr;
 };
