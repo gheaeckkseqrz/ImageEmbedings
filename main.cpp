@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "feature_extractor.h"
+#include "images.h"
 
 int main()
 {
