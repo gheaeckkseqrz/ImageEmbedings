@@ -4,33 +4,33 @@ struct FeatureExtractor : torch::nn::Module
 {
   FeatureExtractor(unsigned int nc)
     {
-      _c1  = register_module("c1", torch::nn::Conv2d(torch::nn::Conv2dOptions(3,  nc*1, 3).stride(1).bias(true)));
-      _c2  = register_module("c1", torch::nn::Conv2d(torch::nn::Conv2dOptions(nc*1, nc*1, 3).stride(1).bias(true)));
-      _c3  = register_module("c1", torch::nn::Conv2d(torch::nn::Conv2dOptions(nc*1, nc*2, 3).stride(2).bias(true)));
-      _c4  = register_module("c1", torch::nn::Conv2d(torch::nn::Conv2dOptions(nc*2, nc*2, 3).stride(1).bias(true)));
-      _c5  = register_module("c1", torch::nn::Conv2d(torch::nn::Conv2dOptions(nc*2, nc*2, 3).stride(1).bias(true)));
-      _c6  = register_module("c1", torch::nn::Conv2d(torch::nn::Conv2dOptions(nc*2, nc*4, 3).stride(2).bias(true)));
-      _c7  = register_module("c1", torch::nn::Conv2d(torch::nn::Conv2dOptions(nc*4, nc*4, 3).stride(1).bias(true)));
-      _c8  = register_module("c1", torch::nn::Conv2d(torch::nn::Conv2dOptions(nc*4, nc*4, 3).stride(1).bias(true)));
-      _c9  = register_module("c1", torch::nn::Conv2d(torch::nn::Conv2dOptions(nc*4, nc*8, 3).stride(2).bias(true)));
-      _c10 = register_module("c1", torch::nn::Conv2d(torch::nn::Conv2dOptions(nc*8, nc*8, 3).stride(1).bias(true)));
-      _c11 = register_module("c1", torch::nn::Conv2d(torch::nn::Conv2dOptions(nc*8, nc*8, 3).stride(1).bias(true)));
-      _c12 = register_module("c1", torch::nn::Conv2d(torch::nn::Conv2dOptions(nc*8, nc*8, 3).stride(2).bias(true)));
-      _c13 = register_module("c1", torch::nn::Conv2d(torch::nn::Conv2dOptions(nc*8, nc*8, 3).stride(1).bias(true)));
+      _c1  = register_module("c1",  torch::nn::Conv2d(torch::nn::Conv2dOptions(  3,  nc*1, 3).padding(1).stride(1).bias(true)));
+      _c2  = register_module("c2",  torch::nn::Conv2d(torch::nn::Conv2dOptions(nc*1, nc*1, 3).padding(1).stride(1).bias(true)));
+      _c3  = register_module("c3",  torch::nn::Conv2d(torch::nn::Conv2dOptions(nc*1, nc*2, 3).padding(1).stride(2).bias(true)));
+      _c4  = register_module("c4",  torch::nn::Conv2d(torch::nn::Conv2dOptions(nc*2, nc*2, 3).padding(1).stride(1).bias(true)));
+      _c5  = register_module("c5",  torch::nn::Conv2d(torch::nn::Conv2dOptions(nc*2, nc*2, 3).padding(1).stride(1).bias(true)));
+      _c6  = register_module("c6",  torch::nn::Conv2d(torch::nn::Conv2dOptions(nc*2, nc*4, 3).padding(1).stride(2).bias(true)));
+      _c7  = register_module("c7",  torch::nn::Conv2d(torch::nn::Conv2dOptions(nc*4, nc*4, 3).padding(1).stride(1).bias(true)));
+      _c8  = register_module("c8",  torch::nn::Conv2d(torch::nn::Conv2dOptions(nc*4, nc*4, 3).padding(1).stride(1).bias(true)));
+      _c9  = register_module("c9",  torch::nn::Conv2d(torch::nn::Conv2dOptions(nc*4, nc*8, 3).padding(1).stride(2).bias(true)));
+      _c10 = register_module("c10", torch::nn::Conv2d(torch::nn::Conv2dOptions(nc*8, nc*8, 3).padding(1).stride(1).bias(true)));
+      _c11 = register_module("c11", torch::nn::Conv2d(torch::nn::Conv2dOptions(nc*8, nc*8, 3).padding(1).stride(1).bias(true)));
+      _c12 = register_module("c12", torch::nn::Conv2d(torch::nn::Conv2dOptions(nc*8, nc*8, 3).padding(1).stride(2).bias(true)));
+      _c13 = register_module("c13", torch::nn::Conv2d(torch::nn::Conv2dOptions(nc*8, nc*8, 3).padding(1).stride(1).bias(true)));
 
-      _n1   = torch::nn::InstanceNorm2d(nc * 1);
-      _n2   = torch::nn::InstanceNorm2d(nc * 1);
-      _n3   = torch::nn::InstanceNorm2d(nc * 2);
-      _n4   = torch::nn::InstanceNorm2d(nc * 2);
-      _n5   = torch::nn::InstanceNorm2d(nc * 2);
-      _n6   = torch::nn::InstanceNorm2d(nc * 4);
-      _n7   = torch::nn::InstanceNorm2d(nc * 4);
-      _n8   = torch::nn::InstanceNorm2d(nc * 4);
-      _n9   = torch::nn::InstanceNorm2d(nc * 8);
-      _n10  = torch::nn::InstanceNorm2d(nc * 8);
-      _n11  = torch::nn::InstanceNorm2d(nc * 8);
-      _n12  = torch::nn::InstanceNorm2d(nc * 8);
-      _n13  = torch::nn::InstanceNorm2d(nc * 8);
+      _n1   = register_module("n1",  torch::nn::InstanceNorm2d(nc * 1));
+      _n2   = register_module("n2",  torch::nn::InstanceNorm2d(nc * 1));
+      _n3   = register_module("n3",  torch::nn::InstanceNorm2d(nc * 2));
+      _n4   = register_module("n4",  torch::nn::InstanceNorm2d(nc * 2));
+      _n5   = register_module("n5",  torch::nn::InstanceNorm2d(nc * 2));
+      _n6   = register_module("n6",  torch::nn::InstanceNorm2d(nc * 4));
+      _n7   = register_module("n7",  torch::nn::InstanceNorm2d(nc * 4));
+      _n8   = register_module("n8",  torch::nn::InstanceNorm2d(nc * 4));
+      _n9   = register_module("n9",  torch::nn::InstanceNorm2d(nc * 8));
+      _n10  = register_module("n10", torch::nn::InstanceNorm2d(nc * 8));
+      _n11  = register_module("n11", torch::nn::InstanceNorm2d(nc * 8));
+      _n12  = register_module("n12", torch::nn::InstanceNorm2d(nc * 8));
+      _n13  = register_module("n13", torch::nn::InstanceNorm2d(nc * 8));
     }
 
   torch::Tensor forward(torch::Tensor x)
