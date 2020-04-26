@@ -4,7 +4,7 @@
 
 TEST_CASE( "Load Red", "[Images]" )
 {
-  torch::Tensor red = loadImage("../tests/data/red.png");
+  torch::Tensor red = loadImage("./data/red.png");
   REQUIRE( red.sizes() == std::vector<int64_t>{3, 5, 5} );
   for (unsigned int y(0) ; y < 5 ; ++y)
     for (unsigned int x(0) ; x < 5 ; ++x)
@@ -17,7 +17,7 @@ TEST_CASE( "Load Red", "[Images]" )
 
 TEST_CASE( "Load Green", "[Images]" )
 {
-  torch::Tensor green = loadImage("../tests/data/green.png");
+  torch::Tensor green = loadImage("./data/green.png");
   REQUIRE( green.sizes() == std::vector<int64_t>{3, 5, 5} );
   for (unsigned int y(0) ; y < 5 ; ++y)
     for (unsigned int x(0) ; x < 5 ; ++x)
@@ -30,7 +30,7 @@ TEST_CASE( "Load Green", "[Images]" )
 
 TEST_CASE( "Load Blue", "[Images]" )
 {
-  torch::Tensor blue = loadImage("../tests/data/blue.png");
+  torch::Tensor blue = loadImage("./data/blue.png");
   REQUIRE( blue.sizes() == std::vector<int64_t>{3, 5, 5} );
   for (unsigned int y(0) ; y < 5 ; ++y)
     for (unsigned int x(0) ; x < 5 ; ++x)

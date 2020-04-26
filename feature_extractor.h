@@ -40,6 +40,8 @@ struct FeatureExtractor : torch::nn::Module
       _fc2 = register_module("fc2", torch::nn::Linear(256, nz));
     }
 
+  ~FeatureExtractor() = default;
+
   torch::Tensor forward(torch::Tensor x)
     {
       x = _n1(torch::relu(_c1(x)));
