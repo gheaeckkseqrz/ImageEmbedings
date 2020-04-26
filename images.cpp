@@ -23,3 +23,4 @@ torch::Tensor loadImage(std::string const &path, unsigned int size)
   t.transpose_(2, 0);
   return t / 255;
 }
+
