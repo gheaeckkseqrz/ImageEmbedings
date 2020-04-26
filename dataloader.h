@@ -14,6 +14,12 @@ struct Triplet
   torch::Tensor anchor;
   torch::Tensor same;
   torch::Tensor diff;
+
+  unsigned int anchor_folder_index;
+  unsigned int diff_folder_index;
+  unsigned int anchor_index;
+  unsigned int same_index;
+  unsigned int diff_index;
 };
 
 class Dataloader
@@ -58,22 +64,31 @@ class Dataloader
 
   Triplet getTriplet() const
     {
-      assert(_data.size() > 1);
-      unsigned int anchor_folder_index = rand() % _data.size();
-      unsigned int diff_folder_index = rand() % _data.size();
-      while (diff_folder_index == anchor_folder_index)
-	diff_folder_index = rand() % _data.size();
-      unsigned int anchor_index = rand() % _data[anchor_folder_index].size();
-      unsigned int same_index = rand() % _data[anchor_folder_index].size();
-      unsigned int diff_index = rand() % _data[diff_folder_index].size();
       Triplet res;
-      res.anchor = get(anchor_folder_index, anchor_index, _size);
-      res.same = get(anchor_folder_index, same_index, _size);
-      res.diff = get(diff_folder_index, diff_index, _size);
+      assert(_data.size() > 1);
+      res.anchor_folder_index = rand() % std::min(_data.size(), _max_folder);
+      res.diff_folder_index = rand() % std::min(_data.size(), _max_folder);
+      while (res.diff_folder_index == res.anchor_folder_index)
+	res.diff_folder_index = rand() % std::min(_data.size(), _max_folder);
+      res.anchor_index = rand() % _data[res.anchor_folder_index].size();
+      res.same_index = rand() % std::min(_data[res.anchor_folder_index].size(), _max_file);
+      res.diff_index = rand() % std::min(_data[res.diff_folder_index].size(), _max_file);
+
+      res.anchor = get(res.anchor_folder_index, res.anchor_index, _size);
+      res.same = get(res.anchor_folder_index, res.same_index, _size);
+      res.diff = get(res.diff_folder_index, res.diff_index, _size);
       return res;
     }
 
+  void setLimits(unsigned int files, unsigned int folders)
+  {
+    _max_file = files;
+    _max_folder = folders;
+  }
+
  private:
-  unsigned int _size;
+  size_t _max_folder;
+  size_t _max_file;
+  size_t _size;
   std::vector<std::vector<std::string>> _data;
 };

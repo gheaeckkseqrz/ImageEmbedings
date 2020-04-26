@@ -26,3 +26,18 @@ TEST_CASE( "Test specific image size", "[Dataloader]" )
   REQUIRE( t.sizes() == std::vector<int64_t>{3, 42, 42} );
 }
 
+TEST_CASE( "Test limits", "[Dataloader]" )
+{
+  Dataloader d;
+  for (int i(0) ; i < 50 ; ++i)
+    d.addFolder("../tests/data");
+  d.setLimits(2, 2);
+  Triplet t = d.getTriplet();
+  REQUIRE( t.anchor_folder_index < 2);
+  REQUIRE( t.diff_folder_index < 2);
+  REQUIRE( t.diff_folder_index != t.anchor_folder_index);
+  REQUIRE( t.anchor_index < 2 );
+  REQUIRE( t.same_index < 2 );
+  REQUIRE( t.diff_index < 2 );
+}
+
