@@ -52,6 +52,16 @@ class Dataloader
     return _data.back().size();
   }
 
+  void fillCache(unsigned int folders, unsigned int files)
+  {
+    for (unsigned int i(0) ; i < folders ; ++i)
+      {
+	_cache.push_back(std::vector<torch::Tensor>());
+	for (unsigned int j(0) ; j < files ; ++j)
+	  _cache.back().push_back(loadImage(_data[i][j], _size).cuda());
+      }
+  }
+
   torch::Tensor get(unsigned int folder, unsigned file) const
     {
       return get(folder, file, _size);
@@ -59,7 +69,9 @@ class Dataloader
 
   torch::Tensor get(unsigned int folder, unsigned file, unsigned int size) const
     {
-      return loadImage(_data[folder][file], size);
+      if (folder < _cache.size() && file < _cache[folder].size())
+	return _cache[folder][file];
+      return loadImage(_data[folder][file], size).cuda();
     }
 
   Triplet getTriplet() const
@@ -70,7 +82,7 @@ class Dataloader
       res.diff_folder_index = rand() % std::min(_data.size(), _max_folder);
       while (res.diff_folder_index == res.anchor_folder_index)
 	res.diff_folder_index = rand() % std::min(_data.size(), _max_folder);
-      res.anchor_index = rand() % _data[res.anchor_folder_index].size();
+      res.anchor_index = rand() % std::min(_data[res.anchor_folder_index].size(), _max_file);
       res.same_index = rand() % std::min(_data[res.anchor_folder_index].size(), _max_file);
       res.diff_index = rand() % std::min(_data[res.diff_folder_index].size(), _max_file);
 
@@ -91,4 +103,5 @@ class Dataloader
   size_t _max_file;
   size_t _size;
   std::vector<std::vector<std::string>> _data;
+  std::vector<std::vector<torch::Tensor>> _cache;
 };
