@@ -45,35 +45,35 @@ struct FeatureExtractor : torch::nn::Module
   torch::Tensor forward(torch::Tensor x)
     {
       x = _n1(torch::relu(_c1(x)));
-      x = torch::dropout(x, 0.5, is_training());
+      x = torch::dropout(x, 0.2, is_training());
       x = _n2(torch::relu(_c2(x)));
-      x = torch::dropout(x, 0.5, is_training());
+      x = torch::dropout(x, 0.2, is_training());
       x = _n3(torch::relu(_c3(x)));
-      x = torch::dropout(x, 0.5, is_training());
+      x = torch::dropout(x, 0.2, is_training());
       x = _n4(torch::relu(_c4(x)));
-      x = torch::dropout(x, 0.5, is_training());
+      x = torch::dropout(x, 0.2, is_training());
       x = _n5(torch::relu(_c5(x)));
-      x = torch::dropout(x, 0.5, is_training());
+      x = torch::dropout(x, 0.2, is_training());
       x = _n6(torch::relu(_c6(x)));
-      x = torch::dropout(x, 0.5, is_training());
+      x = torch::dropout(x, 0.2, is_training());
       x = _n7(torch::relu(_c7(x)));
-      x = torch::dropout(x, 0.5, is_training());
+      x = torch::dropout(x, 0.2, is_training());
       x = _n8(torch::relu(_c8(x)));
-      x = torch::dropout(x, 0.5, is_training());
+      x = torch::dropout(x, 0.2, is_training());
       x = _n9(torch::relu(_c9(x)));
-      x = torch::dropout(x, 0.5, is_training());
+      x = torch::dropout(x, 0.2, is_training());
       x = _n10(torch::relu(_c10(x)));
-      x = torch::dropout(x, 0.5, is_training());
+      x = torch::dropout(x, 0.2, is_training());
       x = _n11(torch::relu(_c11(x)));
-      x = torch::dropout(x, 0.5, is_training());
+      x = torch::dropout(x, 0.2, is_training());
       x = _n12(torch::relu(_c12(x)));
-      x = torch::dropout(x, 0.5, is_training());
+      x = torch::dropout(x, 0.2, is_training());
       x = _n13(torch::relu(_c13(x)));
 
       x = _f(x);
 
       x = torch::relu(_fc1(x));
-      x = torch::dropout(x, 0.5, is_training());
+      x = torch::dropout(x, 0.2, is_training());
       x = _fc2(x);
 
       return x;
