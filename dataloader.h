@@ -25,7 +25,7 @@ struct Triplet
 class Dataloader
 {
  public:
-  Dataloader(unsigned int size = 256)
+  Dataloader( unsigned int size = 256)
     :_size(size) {}
 
  Dataloader(std::string const &data_path, unsigned int size = 256)
@@ -35,15 +35,16 @@ class Dataloader
       unsigned int max = std::numeric_limits<unsigned int>::min();
       for (const auto & entry : fs::directory_iterator(data_path))
 	{
-	  unsigned int s = addFolder(entry.path());
+	  unsigned int s = this->addFolder(entry.path());
 	  min = std::min(s, min);
 	  max = std::max(s, max);
 	}
       std::cout << "Added " << _data.size() << " folders" << std::endl;
       std::cout << "Number of file per folder in range [" << min << "/" << max << "]" << std::endl;
+      std::cout << "Total number of files " << Dataloader::size() << std::endl;
     }
 
-  unsigned int addFolder(std::string const &path)
+  virtual unsigned int addFolder(std::string const &path)
   {
     std::vector<std::string> file_list;
     for (const auto & entry : fs::directory_iterator(path))
@@ -74,7 +75,7 @@ class Dataloader
       return loadImage(_data[folder][file], size).cuda();
     }
 
-  Triplet getTriplet() const
+  virtual Triplet getTriplet() const
     {
       Triplet res;
       assert(_data.size() > 1);
@@ -92,13 +93,35 @@ class Dataloader
       return res;
     }
 
+  unsigned int size() const
+  {
+    unsigned int total(0);
+    for (auto const &folder : _data)
+      total += folder.size();
+    return total;
+  }
+
   void setLimits(unsigned int files, unsigned int folders)
   {
     _max_file = files;
     _max_folder = folders;
   }
 
- private:
+  std::pair<unsigned int , unsigned int> findFolderAndFileForIndex(unsigned int index)
+  {
+    std::pair<unsigned int , unsigned int> res;
+    res.first = 0;
+    res.second = 0;
+    while (index >= _data[res.first].size())
+      {
+	index -= _data[res.first].size();
+	res.first += 1;
+      }
+    res.second = index;
+    return res;
+  }
+
+protected:
   size_t _max_folder;
   size_t _max_file;
   size_t _size;

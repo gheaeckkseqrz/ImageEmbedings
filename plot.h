@@ -73,7 +73,7 @@ private:
   cv::Mat _canvas;
   std::vector<cv::Point_<float>> _points;
   std::vector<unsigned int> _labels;
-  std::vector<cv::Scalar_<int>> _colors;
+  static std::vector<cv::Scalar_<int>> _colors;
   std::string _name;
   float _min;
   float _max;
