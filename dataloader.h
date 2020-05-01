@@ -63,6 +63,11 @@ class Dataloader
       }
   }
 
+  std::string getPath(unsigned int folder, unsigned file) const
+  {
+    return _data[folder][file];
+  }
+
   torch::Tensor get(unsigned int folder, unsigned file) const
     {
       return get(folder, file, _size);

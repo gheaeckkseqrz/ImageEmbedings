@@ -5,15 +5,28 @@
 #include "feature_extractor.h"
 #include "dataminer.h"
 #include "feature_extractor.h"
-#include "plot.h"
+#include "GUI.h"
 
-std::vector<cv::Scalar_<int>> ScatterPlot::_colors;
 int Z = 2;
 
-void plot(Dataminer &dataloader, std::shared_ptr<FeatureExtractor> model, unsigned int folder_limit, unsigned int file_limit)
+struct Options : public GUIDelegate
+{
+public:
+  virtual void increaseFileLimit() { fileLimit++; }
+  virtual void decreaseFileLimit() { fileLimit--; }
+  virtual void increaseFolderLimit() { folderLimit++; }
+  virtual void decreaseFolderLimit() { folderLimit--; }
+  virtual void increaseMargin() { margin += 0.01; }
+  virtual void decreaseMargin() { margin -= 0.01; }
+
+  unsigned int fileLimit = 100;
+  unsigned int folderLimit = 3;
+  float margin = .5;
+};
+
+void plot(GUI &gui, Dataminer &dataloader, std::shared_ptr<FeatureExtractor> model, unsigned int folder_limit, unsigned int file_limit)
 {
   model->eval();
-  ScatterPlot p;
   for (unsigned int folder(0) ; folder < folder_limit ; ++folder)
   {
     for (unsigned int i(0) ; i < file_limit ; ++i)
@@ -21,14 +34,13 @@ void plot(Dataminer &dataloader, std::shared_ptr<FeatureExtractor> model, unsign
 	torch::Tensor image = dataloader.get(folder, i).unsqueeze(0);
 	torch::Tensor code = model->forward(image);
 	dataloader.setEmbedding(folder, i, code[0].data());
-	p.addPoint(code[0][0].item<float>(), code[0][1].item<float>(), folder);
+	gui.addPoint(code[0][0].item<float>(), code[0][1].item<float>(), folder, dataloader.getPath(folder, i));
       }
   }
-  p.display();
-  cv::waitKey(100);
+  gui.update();
 }
 
-float train(Dataminer &dataloader, std::shared_ptr<FeatureExtractor> model, torch::optim::Adam &optimizer)
+float train(Dataminer &dataloader, std::shared_ptr<FeatureExtractor> model, torch::optim::Adam &optimizer, float margin)
 {
   model->train();
   float total_loss = 0;
@@ -58,8 +70,8 @@ float train(Dataminer &dataloader, std::shared_ptr<FeatureExtractor> model, torc
       torch::Tensor norm_same = torch::norm(same_code);
       torch::Tensor norm_diff = torch::norm(diff_code);
 
-      torch::Tensor loss_same = torch::cosine_embedding_loss(same_code, anchor_code, label_pos, .5);
-      torch::Tensor loss_diff = torch::cosine_embedding_loss(diff_code, anchor_code, label_neg, .5);
+      torch::Tensor loss_same = torch::cosine_embedding_loss(same_code, anchor_code, label_pos, margin);
+      torch::Tensor loss_diff = torch::cosine_embedding_loss(diff_code, anchor_code, label_neg, margin);
       torch::Tensor loss_norm_same = torch::mse_loss(norm_same, norm_target) / 500;
       torch::Tensor loss_norm_diff = torch::mse_loss(norm_diff, norm_target) / 500;
 
@@ -79,22 +91,27 @@ int main(int ac, char **av)
       return -1;
     }
 
-  unsigned int folder_limit = 10;
-  unsigned int file_limit = 3;
+  Options o;
+  GUI g(&o);
+  g.start();
   Dataminer dataloader(Z, av[1], 256);
-  dataloader.fillCache(folder_limit, file_limit);
+  dataloader.fillCache(20, 100);
   auto model = std::make_shared<FeatureExtractor>(32, 2);
   model->to(at::kCUDA);
   torch::optim::Adam optimizer(model->parameters(), 0.0001);
 
-  dataloader.setLimits(10, folder_limit);
   while (true)
     {
+      dataloader.setLimits(o.fileLimit, o.folderLimit);
+      std::cout << "======================" << std::endl;
+      std::cout << "Folders : " << o.folderLimit << std::endl;
+      std::cout << "Files   : " << o.fileLimit << std::endl;
+      std::cout << "Margin  : " << o.margin << std::endl;
+      std::cout << "======================" << std::endl;
       for (int i(0) ; i  < 1 ; ++i)
-      	std::cout << folder_limit << " -- " << i << " -- " << train(dataloader, model, optimizer) << std::endl;
-      plot(dataloader, model, folder_limit, file_limit);
+      	std::cout << i << " -- " << train(dataloader, model, optimizer, o.margin) << std::endl;
+      plot(g, dataloader, model, o.folderLimit, o.fileLimit);
     }
 
-  cv::waitKey(0);
   return 0;
 }
