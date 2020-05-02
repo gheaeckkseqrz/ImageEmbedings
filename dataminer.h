@@ -71,7 +71,7 @@ class Dataminer : public Dataloader
 
   Triplet getTriplet() const override
   {
-    if (rand() % 3 == 0)
+    if (rand() % 100 < _sampling)
       return Dataloader::getTriplet();
 
     Triplet res;
@@ -90,7 +90,13 @@ class Dataminer : public Dataloader
     return res;
   }
 
+  void setSampling(float s)
+  {
+    _sampling = s;
+  }
+
  private:
   std::vector<torch::Tensor> _embedings;
   unsigned int _Z;
+  float _sampling;
 };

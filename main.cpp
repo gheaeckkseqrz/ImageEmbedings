@@ -7,7 +7,7 @@
 #include "feature_extractor.h"
 #include "GUI.h"
 
-int Z = 2;
+int Z = 3;
 
 struct Options : public GUIDelegate
 {
@@ -18,10 +18,16 @@ public:
   virtual void decreaseFolderLimit() { folderLimit--; }
   virtual void increaseMargin() { margin += 0.01; }
   virtual void decreaseMargin() { margin -= 0.01; }
+  virtual void increaseSampling() { sampling++; }
+  virtual void decreaseSampling() { sampling--; }
+  virtual void increaseDisplayEvery() { displayEvery++; }
+  virtual void decreaseDisplayEvery() { displayEvery--; }
 
   unsigned int fileLimit = 100;
   unsigned int folderLimit = 3;
   float margin = .5;
+  float sampling = 50;
+  unsigned int displayEvery = 1;
 };
 
 void plot(GUI &gui, Dataminer &dataloader, std::shared_ptr<FeatureExtractor> model, unsigned int folder_limit, unsigned int file_limit)
@@ -96,19 +102,22 @@ int main(int ac, char **av)
   g.start();
   Dataminer dataloader(Z, av[1], 256);
   dataloader.fillCache(20, 100);
-  auto model = std::make_shared<FeatureExtractor>(32, 2);
+  auto model = std::make_shared<FeatureExtractor>(32, Z);
   model->to(at::kCUDA);
   torch::optim::Adam optimizer(model->parameters(), 0.0001);
 
   while (true)
     {
       dataloader.setLimits(o.fileLimit, o.folderLimit);
+      dataloader.setSampling(o.sampling);
       std::cout << "======================" << std::endl;
       std::cout << "Folders : " << o.folderLimit << std::endl;
       std::cout << "Files   : " << o.fileLimit << std::endl;
       std::cout << "Margin  : " << o.margin << std::endl;
+      std::cout << "Sampling  : " << o.sampling << std::endl;
+      std::cout << "DisplayEvery  : " << o.displayEvery << std::endl;
       std::cout << "======================" << std::endl;
-      for (int i(0) ; i  < 1 ; ++i)
+      for (int i(0) ; i  < o.displayEvery ; ++i)
       	std::cout << i << " -- " << train(dataloader, model, optimizer, o.margin) << std::endl;
       plot(g, dataloader, model, o.folderLimit, o.fileLimit);
     }

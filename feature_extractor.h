@@ -39,7 +39,7 @@ struct FeatureExtractor : torch::nn::Module
       _fc1 = register_module("fc1", torch::nn::Linear(nc * 8 * 16 * 16, 256));
       _fc2 = register_module("fc2", torch::nn::Linear(256, 128));
       _fc3 = register_module("fc3", torch::nn::Linear(128, 64));
-      _fc4 = register_module("fc4", torch::nn::Linear(64, 2));
+      _fc4 = register_module("fc4", torch::nn::Linear(64, nz));
     }
 
   ~FeatureExtractor() = default;
