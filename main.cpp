@@ -7,7 +7,7 @@
 #include "feature_extractor.h"
 #include "GUI.h"
 
-int Z = 3;
+int Z = 2;
 
 struct Options : public GUIDelegate
 {
@@ -24,10 +24,10 @@ public:
   virtual void decreaseDisplayEvery() { displayEvery--; }
 
   unsigned int fileLimit = 100;
-  unsigned int folderLimit = 3;
-  float margin = .5;
+  unsigned int folderLimit = 100;
+  float margin = .9;
   float sampling = 50;
-  unsigned int displayEvery = 1;
+  unsigned int displayEvery = 500;
 };
 
 void plot(GUI &gui, Dataminer &dataloader, std::shared_ptr<FeatureExtractor> model, unsigned int folder_limit, unsigned int file_limit)
@@ -51,7 +51,7 @@ float train(Dataminer &dataloader, std::shared_ptr<FeatureExtractor> model, torc
   model->train();
   float total_loss = 0;
   torch::Tensor reference_target = torch::zeros(std::vector<int64_t>({Z})).cuda();
-  reference_target[0] = 7;
+  reference_target[0] = .8;
   torch::Tensor norm_target = torch::ones(std::vector<int64_t>({1})).cuda();
   norm_target.fill_(torch::norm(reference_target).item<float>());
 
@@ -65,21 +65,21 @@ float train(Dataminer &dataloader, std::shared_ptr<FeatureExtractor> model, torc
   for (unsigned int i(0) ; i < 32 ; ++i)
     {
       Triplet training_triplet = dataloader.getTriplet();
-      torch::Tensor anchor_code = model->forward(training_triplet.anchor.unsqueeze(0)).detach() * 10;
-      torch::Tensor same_code = model->forward(training_triplet.same.unsqueeze(0)) * 10;
-      torch::Tensor diff_code = model->forward(training_triplet.diff.unsqueeze(0)) * 10;
+      torch::Tensor anchor_code = model->forward(training_triplet.anchor.unsqueeze(0)); //.detach();
+      torch::Tensor same_code = model->forward(training_triplet.same.unsqueeze(0));
+      torch::Tensor diff_code = model->forward(training_triplet.diff.unsqueeze(0));
 
       dataloader.setEmbedding(training_triplet.anchor_folder_index, training_triplet.anchor_index, anchor_code[0].data());
-      dataloader.setEmbedding(training_triplet.anchor_folder_index, training_triplet.same_index, same_code[0].data());
-      dataloader.setEmbedding(training_triplet.diff_folder_index, training_triplet.diff_index, diff_code[0].data());
+      dataloader.setEmbedding(training_triplet.anchor_folder_index, training_triplet.same_index,   same_code[0].data());
+      dataloader.setEmbedding(training_triplet.diff_folder_index,   training_triplet.diff_index,   diff_code[0].data());
 
       torch::Tensor norm_same = torch::norm(same_code);
       torch::Tensor norm_diff = torch::norm(diff_code);
 
       torch::Tensor loss_same = torch::cosine_embedding_loss(same_code, anchor_code, label_pos, margin);
       torch::Tensor loss_diff = torch::cosine_embedding_loss(diff_code, anchor_code, label_neg, margin);
-      torch::Tensor loss_norm_same = torch::mse_loss(norm_same, norm_target) / 500;
-      torch::Tensor loss_norm_diff = torch::mse_loss(norm_diff, norm_target) / 500;
+      torch::Tensor loss_norm_same = torch::relu(norm_same - 0.8);
+      torch::Tensor loss_norm_diff = torch::relu(norm_diff - 0.8);
 
       torch::Tensor loss = loss_same + loss_diff + loss_norm_same + loss_norm_diff;
       total_loss += loss.item<float>();
@@ -120,6 +120,7 @@ int main(int ac, char **av)
       for (int i(0) ; i  < o.displayEvery ; ++i)
       	std::cout << i << " -- " << train(dataloader, model, optimizer, o.margin) << std::endl;
       plot(g, dataloader, model, o.folderLimit, o.fileLimit);
+      // torch::save(model->state_dict(), "model.pt")
     }
 
   return 0;
