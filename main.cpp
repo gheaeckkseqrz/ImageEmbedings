@@ -7,7 +7,7 @@
 #include "feature_extractor.h"
 #include "GUI.h"
 
-int Z = 2;
+int Z = 128;
 
 struct Options : public GUIDelegate
 {
