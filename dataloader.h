@@ -42,6 +42,7 @@ class Dataloader
       std::cout << "Added " << _data.size() << " folders" << std::endl;
       std::cout << "Number of file per folder in range [" << min << "/" << max << "]" << std::endl;
       std::cout << "Total number of files " << Dataloader::size() << std::endl;
+      std::random_shuffle ( _data.begin(), _data.end() );
     }
 
   virtual unsigned int addFolder(std::string const &path)

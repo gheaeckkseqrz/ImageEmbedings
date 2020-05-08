@@ -71,7 +71,7 @@ class Dataminer : public Dataloader
 
   Triplet getTriplet() const override
   {
-    if (rand() % 100 < _sampling)
+    if (rand() % 100 >= _sampling)
       return Dataloader::getTriplet();
 
     Triplet res;

@@ -24,17 +24,19 @@ public:
   virtual void decreaseDisplayEvery() { displayEvery--; }
 
   unsigned int fileLimit = 100;
-  unsigned int folderLimit = 100;
+  unsigned int folderLimit = 8000;
   float margin = .9;
-  float sampling = 50;
-  unsigned int displayEvery = 500;
+  float sampling = 0;
+  unsigned int displayEvery = 250;
 };
 
-void plot(GUI &gui, Dataminer &dataloader, std::shared_ptr<FeatureExtractor> model, unsigned int folder_limit, unsigned int file_limit)
+void plot(GUI &gui, Dataminer &dataloader, FeatureExtractor &model, unsigned int folder_limit, unsigned int file_limit)
 {
   model->eval();
   for (unsigned int folder(0) ; folder < folder_limit ; ++folder)
   {
+    std::cout << "\rPlot " << folder+1 << " / " << folder_limit;
+    std::cout.flush();
     for (unsigned int i(0) ; i < file_limit ; ++i)
       {
 	torch::Tensor image = dataloader.get(folder, i).unsqueeze(0);
@@ -44,9 +46,10 @@ void plot(GUI &gui, Dataminer &dataloader, std::shared_ptr<FeatureExtractor> mod
       }
   }
   gui.update();
+  std::cout << std::endl;
 }
 
-float train(Dataminer &dataloader, std::shared_ptr<FeatureExtractor> model, torch::optim::Adam &optimizer, float margin)
+float train(Dataminer &dataloader, FeatureExtractor &model, torch::optim::Adam &optimizer, float margin)
 {
   model->train();
   float total_loss = 0;
@@ -101,14 +104,15 @@ int main(int ac, char **av)
   GUI g(&o);
   g.start();
   Dataminer dataloader(Z, av[1], 256);
-  dataloader.fillCache(20, 100);
-  auto model = std::make_shared<FeatureExtractor>(32, Z);
+  // dataloader.fillCache(20, 100);
+  FeatureExtractor model(32, Z);
+  // torch::load(model, "model.pt");
   model->to(at::kCUDA);
   torch::optim::Adam optimizer(model->parameters(), 0.0001);
 
   while (true)
     {
-      dataloader.setLimits(o.fileLimit, o.folderLimit);
+      //dataloader.setLimits(o.fileLimit, o.folderLimit);
       dataloader.setSampling(o.sampling);
       std::cout << "======================" << std::endl;
       std::cout << "Folders : " << o.folderLimit << std::endl;
@@ -117,10 +121,12 @@ int main(int ac, char **av)
       std::cout << "Sampling  : " << o.sampling << std::endl;
       std::cout << "DisplayEvery  : " << o.displayEvery << std::endl;
       std::cout << "======================" << std::endl;
+      // plot(g, dataloader, model, o.folderLimit, o.fileLimit);
+      plot(g, dataloader, model, 200, 10);
       for (int i(0) ; i  < o.displayEvery ; ++i)
       	std::cout << i << " -- " << train(dataloader, model, optimizer, o.margin) << std::endl;
-      plot(g, dataloader, model, o.folderLimit, o.fileLimit);
-      // torch::save(model->state_dict(), "model.pt")
+      torch::save(model, "model.pt");
+      o.folderLimit++;
     }
 
   return 0;
