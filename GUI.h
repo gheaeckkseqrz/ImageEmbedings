@@ -143,6 +143,7 @@ class GUI
 	_window.clear(sf::Color(10, 10, 10));
 	{
 	  std::scoped_lock lock(_pointActiveM);
+	  unsigned int x(0);
 	  for (Item item : _pointsActive)
 	    {
 	      item.x *= 1000;
@@ -159,8 +160,12 @@ class GUI
 		  sf::Sprite sprite;
 		  sf::Texture texture;
 		  texture.loadFromFile(item.path);
+		  sf::Vector2u size = texture.getSize();
 		  sprite.setTexture(texture);
+		  sprite.setScale(256.0 / size.x, 256.0 / size.y);
+		  sprite.setPosition(x, 0);
 		  _window.draw(sprite);
+		  x += 256;
 		}
 	      _window.draw(shape);
 	    }
