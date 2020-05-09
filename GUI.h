@@ -34,7 +34,17 @@ class GUI
 {
  public:
   GUI(GUIDelegate * delegate = nullptr)
-    :_delegate(delegate) {}
+    :_delegate(delegate), _max(1)
+  {
+    _colors.push_back({0,     0, 255});
+    _colors.push_back({0,   255,   0});
+    _colors.push_back({0,   255, 255});
+    _colors.push_back({255,   0,   0});
+    _colors.push_back({255,   0, 255});
+    _colors.push_back({255, 255,   0});
+    _colors.push_back({255, 255, 255});
+    _colors.push_back({127, 127, 127});
+  }
 
   ~GUI()
   {
@@ -47,11 +57,13 @@ class GUI
     _thread = std::thread(&GUI::_start, this);
   }
 
-  void addPoint(float x, float y, unsigned int label, std::string path)
+  void addPoint(double x, double y, unsigned int label, std::string path)
   {
     Item i;
-    i.x = x * 1000 + 1000;
-    i.y = y * 1000 + 1000;
+    _max = std::max(_max, std::abs(x));
+    _max = std::max(_max, std::abs(y));
+    i.x = x;
+    i.y = y;
     i.label = label;
     i.path = std::move(path);
     _pointsNext.push_back(i);
@@ -62,8 +74,14 @@ class GUI
   void update()
   {
     std::scoped_lock lock(_pointActiveM);
+    for (Item &i : _pointsNext)
+      {
+	i.x /= _max;
+	i.y /= _max;
+      }
     _pointsActive.swap(_pointsNext);
     _pointsNext.clear();
+    _max = 1;
   }
 
  private:
@@ -125,11 +143,15 @@ class GUI
 	_window.clear(sf::Color(10, 10, 10));
 	{
 	  std::scoped_lock lock(_pointActiveM);
-	  for (Item const &item : _pointsActive)
+	  for (Item item : _pointsActive)
 	    {
+	      item.x *= 1000;
+	      item.y *= 1000;
+	      item.x += 1000;
+	      item.y += 1000;
 	      sf::CircleShape shape(5.f);
 	      shape.setFillColor(_colors[item.label]);
-	      shape.setPosition(item.x - 5, item.y - 5);
+	      shape.setPosition(item.x - 5, item.y / _max - 5);
 	      if (std::pow(item.x - mouse.x, 2) + std::pow(item.y - mouse.y, 2) < 25)
 		{
 		  shape.setOutlineThickness(2.f);
@@ -156,4 +178,5 @@ class GUI
   bool                   _alive;
   std::vector<sf::Color> _colors;
   GUIDelegate           *_delegate;
+  double                 _max;
 };

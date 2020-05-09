@@ -58,10 +58,13 @@ class Dataloader
   {
     for (unsigned int i(0) ; i < folders ; ++i)
       {
+	std::cout << "\rFill cache " << i << " / " << folders;
+	std::cout.flush();
 	_cache.push_back(std::vector<torch::Tensor>());
 	for (unsigned int j(0) ; j < files ; ++j)
 	  _cache.back().push_back(loadImage(_data[i][j], _size).cuda());
       }
+    std::cout << std::endl;
   }
 
   std::string getPath(unsigned int folder, unsigned file) const

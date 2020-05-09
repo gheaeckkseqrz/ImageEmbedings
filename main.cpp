@@ -6,8 +6,9 @@
 #include "dataminer.h"
 #include "feature_extractor.h"
 #include "GUI.h"
+#include "tsne.h"
 
-int Z = 128;
+int Z = 3;
 
 struct Options : public GUIDelegate
 {
@@ -24,14 +25,18 @@ public:
   virtual void decreaseDisplayEvery() { displayEvery--; }
 
   unsigned int fileLimit = 100;
-  unsigned int folderLimit = 8000;
-  float margin = .9;
+  unsigned int folderLimit = 8;
+  float margin = .5;
   float sampling = 0;
-  unsigned int displayEvery = 250;
+  unsigned int displayEvery = 10000;
 };
 
 void plot(GUI &gui, Dataminer &dataloader, FeatureExtractor &model, unsigned int folder_limit, unsigned int file_limit)
 {
+  unsigned int N = file_limit * folder_limit;
+  torch::Tensor tsneInput = torch::zeros({N, Z});
+  torch::Tensor tsneOutput = torch::zeros({N, 2u}, torch::kDouble);
+  unsigned int j(0);
   model->eval();
   for (unsigned int folder(0) ; folder < folder_limit ; ++folder)
   {
@@ -42,9 +47,19 @@ void plot(GUI &gui, Dataminer &dataloader, FeatureExtractor &model, unsigned int
 	torch::Tensor image = dataloader.get(folder, i).unsqueeze(0);
 	torch::Tensor code = model->forward(image);
 	dataloader.setEmbedding(folder, i, code[0].data());
-	gui.addPoint(code[0][0].item<float>(), code[0][1].item<float>(), folder, dataloader.getPath(folder, i));
+	tsneInput[j].copy_(code[0].data());
+	j++;
       }
   }
+  tsneInput = tsneInput.to(torch::kDouble);
+  TSNE::run(tsneInput.data_ptr<double>(), N, Z, tsneOutput.data_ptr<double>(), 2, 50, .5, -1, false, 1000, 250, 250);
+  j = 0;
+  for (unsigned int folder(0) ; folder < folder_limit ; ++folder)
+     for (unsigned int i(0) ; i < file_limit ; ++i)
+      {
+	gui.addPoint(tsneOutput[j][0].item<float>(), tsneOutput[j][1].item<float>(), folder, dataloader.getPath(folder, i));
+	j++;
+      }
   gui.update();
   std::cout << std::endl;
 }
@@ -104,15 +119,15 @@ int main(int ac, char **av)
   GUI g(&o);
   g.start();
   Dataminer dataloader(Z, av[1], 256);
-  // dataloader.fillCache(20, 100);
+  //dataloader.fillCache(200, 100);
   FeatureExtractor model(32, Z);
-  // torch::load(model, "model.pt");
+  torch::load(model, "model.pt");
   model->to(at::kCUDA);
   torch::optim::Adam optimizer(model->parameters(), 0.0001);
 
   while (true)
     {
-      //dataloader.setLimits(o.fileLimit, o.folderLimit);
+      dataloader.setLimits(o.fileLimit, o.folderLimit);
       dataloader.setSampling(o.sampling);
       std::cout << "======================" << std::endl;
       std::cout << "Folders : " << o.folderLimit << std::endl;
@@ -122,11 +137,11 @@ int main(int ac, char **av)
       std::cout << "DisplayEvery  : " << o.displayEvery << std::endl;
       std::cout << "======================" << std::endl;
       // plot(g, dataloader, model, o.folderLimit, o.fileLimit);
-      plot(g, dataloader, model, 200, 10);
+      plot(g, dataloader, model, 200, 100);
       for (int i(0) ; i  < o.displayEvery ; ++i)
       	std::cout << i << " -- " << train(dataloader, model, optimizer, o.margin) << std::endl;
       torch::save(model, "model.pt");
-      o.folderLimit++;
+      // o.folderLimit++;
     }
 
   return 0;
