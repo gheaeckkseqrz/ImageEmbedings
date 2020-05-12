@@ -69,10 +69,11 @@ class Dataminer : public Dataloader
     return best;
   }
 
-  Triplet getTriplet() const override
+  Triplet get(size_t index) override
   {
+    (void)index;
     if (rand() % 100 >= _sampling)
-      return Dataloader::getTriplet();
+      return Dataloader::get(index);
 
     Triplet res;
     assert(_data.size() > 1);
@@ -84,9 +85,9 @@ class Dataminer : public Dataloader
     res.diff_folder_index = diff.first;
     res.diff_index = diff.second;
 
-    res.anchor = get(res.anchor_folder_index, res.anchor_index, _size);
-    res.same = get(res.anchor_folder_index, res.same_index, _size);
-    res.diff = get(res.diff_folder_index, res.diff_index, _size);
+    res.anchor = getImage(res.anchor_folder_index, res.anchor_index, _size);
+    res.same = getImage(res.anchor_folder_index, res.same_index, _size);
+    res.diff = getImage(res.diff_folder_index, res.diff_index, _size);
     return res;
   }
 

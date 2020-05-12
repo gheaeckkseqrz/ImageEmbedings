@@ -22,7 +22,7 @@ struct Triplet
   unsigned int diff_index;
 };
 
-class Dataloader //public torch::data::datasets::StreamDataset
+class Dataloader : public torch::data::datasets::Dataset<Dataloader, Triplet>
 {
  public:
   Dataloader( unsigned int size = 256)
@@ -44,7 +44,7 @@ class Dataloader //public torch::data::datasets::StreamDataset
 	}
       std::cout << "Added " << _data.size() << " folders" << std::endl;
       std::cout << "Number of file per folder in range [" << min << "/" << max << "]" << std::endl;
-      std::cout << "Total number of files " << Dataloader::size() << std::endl;
+      std::cout << "Total number of files " << *(Dataloader::size()) << std::endl;
       std::random_shuffle ( _data.begin(), _data.end() );
     }
 
@@ -90,20 +90,21 @@ class Dataloader //public torch::data::datasets::StreamDataset
     return _data[folder][file];
   }
 
-  torch::Tensor get(unsigned int folder, unsigned file) const
+  torch::Tensor getImage(unsigned int folder, unsigned file) const
     {
-      return get(folder, file, _size);
+      return getImage(folder, file, _size);
     }
 
-  torch::Tensor get(unsigned int folder, unsigned file, unsigned int size) const
+  torch::Tensor getImage(unsigned int folder, unsigned file, unsigned int size) const
     {
       if (folder < _cache.size() && file < _cache[folder].size())
 	return _cache[folder][file];
       return loadImage(_data[folder][file], size).cuda();
     }
 
-  virtual Triplet getTriplet() const
+  virtual Triplet get(size_t index)
     {
+      (void)index;
       Triplet res;
       assert(_data.size() > 1);
       res.anchor_folder_index = rand() % std::min(_data.size(), _max_folder);
@@ -114,13 +115,13 @@ class Dataloader //public torch::data::datasets::StreamDataset
       res.same_index = rand() % std::min(_data[res.anchor_folder_index].size(), _max_file);
       res.diff_index = rand() % std::min(_data[res.diff_folder_index].size(), _max_file);
 
-      res.anchor = get(res.anchor_folder_index, res.anchor_index, _size);
-      res.same = get(res.anchor_folder_index, res.same_index, _size);
-      res.diff = get(res.diff_folder_index, res.diff_index, _size);
+      res.anchor = getImage(res.anchor_folder_index, res.anchor_index, _size);
+      res.same = getImage(res.anchor_folder_index, res.same_index, _size);
+      res.diff = getImage(res.diff_folder_index, res.diff_index, _size);
       return res;
     }
 
-  unsigned int size() const
+  c10::optional<long unsigned int>  size() const
   {
     unsigned int total(0);
     for (auto const &folder : _data)

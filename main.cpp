@@ -8,7 +8,7 @@
 #include "GUI.h"
 #include "tsne.h"
 
-int Z = 3;
+int Z = 128;
 
 struct Options : public GUIDelegate
 {
@@ -25,7 +25,7 @@ public:
   virtual void decreaseDisplayEvery() { displayEvery--; }
 
   unsigned int fileLimit = 100;
-  unsigned int folderLimit = 8;
+  unsigned int folderLimit = 8000;
   float margin = .5;
   float sampling = 0;
   unsigned int displayEvery = 10000;
@@ -44,7 +44,7 @@ void plot(GUI &gui, Dataminer &dataloader, FeatureExtractor &model, unsigned int
     std::cout.flush();
     for (unsigned int i(0) ; i < file_limit ; ++i)
       {
-	torch::Tensor image = dataloader.get(folder, i).unsqueeze(0);
+	torch::Tensor image = dataloader.getImage(folder, i).unsqueeze(0);
 	torch::Tensor code = model->forward(image);
 	dataloader.setEmbedding(folder, i, code[0].data());
 	tsneInput[j].copy_(code[0].data());
@@ -82,7 +82,7 @@ float train(Dataminer &dataloader, FeatureExtractor &model, torch::optim::Adam &
   optimizer.zero_grad();
   for (unsigned int i(0) ; i < 32 ; ++i)
     {
-      Triplet training_triplet = dataloader.getTriplet();
+      Triplet training_triplet = dataloader.get(0);
       torch::Tensor anchor_code = model->forward(training_triplet.anchor.unsqueeze(0)); //.detach();
       torch::Tensor same_code = model->forward(training_triplet.same.unsqueeze(0));
       torch::Tensor diff_code = model->forward(training_triplet.diff.unsqueeze(0));
@@ -136,7 +136,7 @@ int main(int ac, char **av)
       std::cout << "Sampling  : " << o.sampling << std::endl;
       std::cout << "DisplayEvery  : " << o.displayEvery << std::endl;
       std::cout << "======================" << std::endl;
-      // plot(g, dataloader, model, o.folderLimit, o.fileLimit);
+      //plot(g, dataloader, model, o.folderLimit, o.fileLimit);
       plot(g, dataloader, model, 200, 100);
       for (int i(0) ; i  < o.displayEvery ; ++i)
       	std::cout << i << " -- " << train(dataloader, model, optimizer, o.margin) << std::endl;
