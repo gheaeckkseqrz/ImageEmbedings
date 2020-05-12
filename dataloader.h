@@ -22,7 +22,7 @@ struct Triplet
   unsigned int diff_index;
 };
 
-class Dataloader
+class Dataloader //public torch::data::datasets::StreamDataset
 {
  public:
   Dataloader( unsigned int size = 256)
@@ -35,9 +35,12 @@ class Dataloader
       unsigned int max = std::numeric_limits<unsigned int>::min();
       for (const auto & entry : fs::directory_iterator(data_path))
 	{
-	  unsigned int s = this->addFolder(entry.path());
-	  min = std::min(s, min);
-	  max = std::max(s, max);
+	  if (entry.is_directory())
+	    {
+	      unsigned int s = this->addFolder(entry.path());
+	      min = std::min(s, min);
+	      max = std::max(s, max);
+	    }
 	}
       std::cout << "Added " << _data.size() << " folders" << std::endl;
       std::cout << "Number of file per folder in range [" << min << "/" << max << "]" << std::endl;
@@ -45,11 +48,26 @@ class Dataloader
       std::random_shuffle ( _data.begin(), _data.end() );
     }
 
+  bool isImage(std::string const &path) const
+  {
+    if (path[path.size() - 3] == 'j' &&
+	path[path.size() - 2] == 'p' &&
+	path[path.size() - 1] == 'g')
+      return true;
+    if (path[path.size() - 3] == 'p' &&
+	path[path.size() - 2] == 'n' &&
+	path[path.size() - 1] == 'g')
+      return true;
+
+    return false;
+  }
+
   virtual unsigned int addFolder(std::string const &path)
   {
     std::vector<std::string> file_list;
     for (const auto & entry : fs::directory_iterator(path))
-      file_list.push_back(entry.path());
+      if (entry.is_regular_file() && isImage(entry.path()))
+	  file_list.push_back(entry.path());
     _data.emplace_back(std::move(file_list));
     return _data.back().size();
   }
