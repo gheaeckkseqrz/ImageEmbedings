@@ -15,6 +15,7 @@ class Dataminer : public Dataloader
     {
       for (std::vector<std::string> const &folder : _data)
 	_embedings.push_back(torch::zeros({folder.size(), _Z}));
+      _idEmbedings = torch::zeros({_data.size(), Z});
     }
 
   virtual unsigned int addFolder(std::string const &path) override
@@ -33,6 +34,11 @@ class Dataminer : public Dataloader
   void setEmbedding(unsigned int folder, unsigned int file, torch::Tensor const &embedding)
   {
     _embedings[folder][file].copy_(embedding);
+  }
+
+  void setIdEmbedding(unsigned int folder, torch::Tensor const &embedding)
+  {
+    _embedings[folder].copy_(embedding);
   }
 
   torch::Tensor getEmbedding(unsigned int index)
@@ -69,6 +75,18 @@ class Dataminer : public Dataloader
     return best;
   }
 
+  unsigned int findClosestIdentity(unsigned int folder, unsigned int file) const
+  {
+    torch::Tensor target = _embedings[folder][file].cuda();
+    torch::Tensor t = _idEmbedings.slice(0, 0, _max_folder, 1).clone().cuda();
+    t -= target;
+    t = t * t;
+    t = torch::sum(t, 1);
+    t[folder].fill_(std::numeric_limits<float>::max());
+    std::tuple<at::Tensor, at::Tensor> min = torch::min(t, 0);
+    return std::get<1>(min).item<int>();
+  }
+
   Triplet get(size_t index) override
   {
     (void)index;
@@ -81,9 +99,8 @@ class Dataminer : public Dataloader
     res.anchor_index = rand() % std::min(_data[res.anchor_folder_index].size(), _max_file);
     res.same_index = rand() % std::min(_data[res.anchor_folder_index].size(), _max_file);
 
-    std::pair<unsigned int, unsigned int> diff = findClosest(res.anchor_folder_index, res.anchor_index);
-    res.diff_folder_index = diff.first;
-    res.diff_index = diff.second;
+    res.diff_folder_index = findClosestIdentity(res.anchor_folder_index, res.anchor_index);
+    res.diff_index = rand() % std::min(_data[res.diff_folder_index].size(), _max_file);;
 
     res.anchor = getImage(res.anchor_folder_index, res.anchor_index, _size);
     res.same = getImage(res.anchor_folder_index, res.same_index, _size);
@@ -96,8 +113,25 @@ class Dataminer : public Dataloader
     _sampling = s;
   }
 
+  void updateIdEmbedings()
+  {
+    std::cout << "updateIdEmbedings" << std::endl;
+    unsigned int i(0);
+    for (torch::Tensor const &idEmbedings : _embedings)
+      {
+	if (_max_folder > 0 && i > _max_folder)
+	  break;
+	std::cout << "\r" << i << " / " << _embedings.size();
+	std::cout.flush();
+	_idEmbedings[i].copy_(torch::mean(idEmbedings, 0).data());
+	i++;
+      }
+    std::cout << std::endl;
+  }
+
  private:
   std::vector<torch::Tensor> _embedings;
-  unsigned int _Z;
-  float _sampling;
+  torch::Tensor              _idEmbedings;
+  unsigned int               _Z;
+  float                      _sampling;
 };

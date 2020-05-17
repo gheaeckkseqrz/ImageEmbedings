@@ -25,10 +25,10 @@ public:
   virtual void decreaseDisplayEvery() { displayEvery--; }
 
   unsigned int fileLimit = 100;
-  unsigned int folderLimit = 8000;
-  float margin = .5;
+  unsigned int folderLimit = 8724;
+  float margin = .9;
   float sampling = 0;
-  unsigned int displayEvery = 10000;
+  unsigned int displayEvery = 5000;
 };
 
 void plot(GUI &gui, Dataminer &dataloader, FeatureExtractor &model, unsigned int folder_limit, unsigned int file_limit)
@@ -46,7 +46,7 @@ void plot(GUI &gui, Dataminer &dataloader, FeatureExtractor &model, unsigned int
       {
 	torch::Tensor image = dataloader.getImage(folder, i).unsqueeze(0);
 	torch::Tensor code = model->forward(image);
-	dataloader.setEmbedding(folder, i, code[0].data());
+	// dataloader.setEmbedding(folder, i, code[0].data());
 	tsneInput[j].copy_(code[0].data());
 	j++;
       }
@@ -125,6 +125,18 @@ int main(int ac, char **av)
   model->to(at::kCUDA);
   torch::optim::Adam optimizer(model->parameters(), 0.0001);
 
+  // Get a couple of point for sampling
+  std::cout << "Initial pass" << std::endl;
+  for (unsigned int folder(0) ; folder < o.folderLimit ; ++folder)
+    {
+      std::cout << "\r" << folder << " / " << o.folderLimit;
+      std::cout.flush();
+      torch::Tensor image = dataloader.getImage(folder, 0).unsqueeze(0);
+      torch::Tensor code = model->forward(image);
+      dataloader.setIdEmbedding(folder, code[0].data());
+    }
+  std::cout << std::endl;
+
   while (true)
     {
       dataloader.setLimits(o.fileLimit, o.folderLimit);
@@ -139,7 +151,11 @@ int main(int ac, char **av)
       //plot(g, dataloader, model, o.folderLimit, o.fileLimit);
       plot(g, dataloader, model, 200, 100);
       for (int i(0) ; i  < o.displayEvery ; ++i)
-      	std::cout << i << " -- " << train(dataloader, model, optimizer, o.margin) << std::endl;
+	{
+	  std::cout << i << " -- " << train(dataloader, model, optimizer, o.margin) << std::endl;
+	  if (i % 200 == 0)
+	    dataloader.updateIdEmbedings();
+	}
       torch::save(model, "model.pt");
       // o.folderLimit++;
     }

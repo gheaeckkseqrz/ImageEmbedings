@@ -68,8 +68,12 @@ class Dataloader : public torch::data::datasets::Dataset<Dataloader, Triplet>
     for (const auto & entry : fs::directory_iterator(path))
       if (entry.is_regular_file() && isImage(entry.path()))
 	  file_list.push_back(entry.path());
-    _data.emplace_back(std::move(file_list));
-    return _data.back().size();
+    if (!file_list.empty())
+      {
+	_data.emplace_back(std::move(file_list));
+	return _data.back().size();
+      }
+    return 0;
   }
 
   void fillCache(unsigned int folders, unsigned int files)
