@@ -24,16 +24,17 @@ public:
   virtual void increaseDisplayEvery() { displayEvery++; }
   virtual void decreaseDisplayEvery() { displayEvery--; }
 
-  unsigned int fileLimit = 100;
-  unsigned int folderLimit = 8724;
+  size_t fileLimit = 100;
+  size_t folderLimit = 8724;
   float margin = .9;
   float sampling = 0;
   unsigned int displayEvery = 5000;
 };
 
-void plot(GUI &gui, Dataminer &dataloader, FeatureExtractor &model, unsigned int folder_limit, unsigned int file_limit)
+void plot(GUI &gui, Dataminer &dataloader, FeatureExtractor &model, size_t folder_limit, size_t file_limit)
 {
-  unsigned int N = file_limit * folder_limit;
+  folder_limit = std::min(folder_limit, dataloader.nbIdentities());
+  unsigned int N = dataloader.size(folder_limit);
   torch::Tensor tsneInput = torch::zeros({N, Z});
   torch::Tensor tsneOutput = torch::zeros({N, 2u}, torch::kDouble);
   unsigned int j(0);
@@ -42,7 +43,7 @@ void plot(GUI &gui, Dataminer &dataloader, FeatureExtractor &model, unsigned int
   {
     std::cout << "\rPlot " << folder+1 << " / " << folder_limit;
     std::cout.flush();
-    for (unsigned int i(0) ; i < file_limit ; ++i)
+    for (unsigned int i(0) ; i < std::min(file_limit, dataloader.identitySize(folder)) ; ++i)
       {
 	torch::Tensor image = dataloader.getImage(folder, i).unsqueeze(0);
 	torch::Tensor code = model->forward(image);
@@ -55,7 +56,7 @@ void plot(GUI &gui, Dataminer &dataloader, FeatureExtractor &model, unsigned int
   TSNE::run(tsneInput.data_ptr<double>(), N, Z, tsneOutput.data_ptr<double>(), 2, 50, .5, -1, false, 1000, 250, 250);
   j = 0;
   for (unsigned int folder(0) ; folder < folder_limit ; ++folder)
-     for (unsigned int i(0) ; i < file_limit ; ++i)
+    for (unsigned int i(0) ; i < std::min(file_limit, dataloader.identitySize(folder)) ; ++i)
       {
 	gui.addPoint(tsneOutput[j][0].item<float>(), tsneOutput[j][1].item<float>(), folder, dataloader.getPath(folder, i));
 	j++;
@@ -127,7 +128,7 @@ int main(int ac, char **av)
 
   // Get a couple of point for sampling
   std::cout << "Initial pass" << std::endl;
-  for (unsigned int folder(0) ; folder < o.folderLimit ; ++folder)
+  for (unsigned int folder(0) ; folder < std::min(o.folderLimit, dataloader.nbIdentities()) ; ++folder)
     {
       std::cout << "\r" << folder << " / " << o.folderLimit;
       std::cout.flush();

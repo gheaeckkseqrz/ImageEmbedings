@@ -133,6 +133,24 @@ class Dataloader : public torch::data::datasets::Dataset<Dataloader, Triplet>
     return total;
   }
 
+  size_t size(size_t until) const
+  {
+    unsigned int total(0);
+    for (size_t i(0) ; i < until ; ++i)
+      total += std::min(_data[i].size(), _max_file);
+    return total;
+  }
+
+  size_t nbIdentities() const
+  {
+    return _data.size();
+  }
+
+  size_t identitySize(size_t id) const
+  {
+    return _data[id].size();
+  }
+
   void setLimits(unsigned int files, unsigned int folders)
   {
     _max_file = files;
