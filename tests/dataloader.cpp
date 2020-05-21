@@ -75,3 +75,29 @@ TEST_CASE( "Index to file folder", "[Dataloader]" )
   REQUIRE( d.findFolderAndFileForIndex(7) == std::make_pair(2u, 1u) );
   REQUIRE( d.findFolderAndFileForIndex(8) == std::make_pair(2u, 2u) );
 }
+
+TEST_CASE( "Use with dataloader", "[Dataloader]")
+{
+  Dataloader d(12);
+  d.addFolder("../tests/data");
+  d.addFolder("../tests/data");
+  d.addFolder("../tests/data");
+  REQUIRE( *d.size() == 9u );
+
+  auto data_loader = torch::data::make_data_loader<torch::data::samplers::SequentialSampler>(d, 4);
+  auto batch = data_loader->begin();
+
+  REQUIRE( batch->anchor.sizes() == std::vector<int64_t>{4, 3, 12, 12} );
+  REQUIRE( batch->diff.sizes()   == std::vector<int64_t>{4, 3, 12, 12} );
+  REQUIRE( batch->same.sizes()   == std::vector<int64_t>{4, 3, 12, 12} );
+  ++batch;
+  REQUIRE( batch->anchor.sizes() == std::vector<int64_t>{4, 3, 12, 12} );
+  REQUIRE( batch->diff.sizes()   == std::vector<int64_t>{4, 3, 12, 12} );
+  REQUIRE( batch->same.sizes()   == std::vector<int64_t>{4, 3, 12, 12} );
+  ++batch;
+  REQUIRE( batch->anchor.sizes() == std::vector<int64_t>{1, 3, 12, 12} );
+  REQUIRE( batch->diff.sizes()   == std::vector<int64_t>{1, 3, 12, 12} );
+  REQUIRE( batch->same.sizes()   == std::vector<int64_t>{1, 3, 12, 12} );
+  ++batch;
+  REQUIRE( batch == data_loader->end() );
+}

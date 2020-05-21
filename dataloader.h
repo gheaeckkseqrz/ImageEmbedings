@@ -15,14 +15,14 @@ struct Triplet
   torch::Tensor same;
   torch::Tensor diff;
 
-  unsigned int anchor_folder_index;
-  unsigned int diff_folder_index;
-  unsigned int anchor_index;
-  unsigned int same_index;
-  unsigned int diff_index;
+  unsigned int anchor_folder_index = -1;
+  unsigned int diff_folder_index = -1;
+  unsigned int anchor_index = -1;
+  unsigned int same_index = -1;
+  unsigned int diff_index = -1;
 };
 
-class Dataloader : public torch::data::datasets::Dataset<Dataloader, Triplet>
+class Dataloader : public torch::data::datasets::BatchDataset<Dataloader, Triplet>
 {
  public:
   Dataloader( unsigned int size = 256)
@@ -106,12 +106,31 @@ class Dataloader : public torch::data::datasets::Dataset<Dataloader, Triplet>
       return loadImage(_data[folder][file], size).cuda();
     }
 
+  virtual Triplet get_batch(c10::ArrayRef<size_t> request)
+  {
+    unsigned int batch_size = request.size();
+    Triplet res;
+    res.anchor = torch::zeros({batch_size, 3, static_cast<long int>(_size), static_cast<long int>(_size)});
+    res.same = torch::zeros({batch_size, 3, static_cast<long int>(_size), static_cast<long int>(_size)});
+    res.diff = torch::zeros({batch_size, 3, static_cast<long int>(_size), static_cast<long int>(_size)});
+    unsigned int i(0);
+    for (unsigned int _ : request)
+      {
+	Triplet t = get(_);
+	res.anchor[i].copy_(t.anchor);
+	res.same[i].copy_(t.same);
+	res.diff[i].copy_(t.diff);
+	i++;
+      }
+    return res;
+  }
+
   virtual Triplet get(size_t index)
     {
       (void)index;
       Triplet res;
       assert(_data.size() > 1);
-      res.anchor_folder_index = rand() % std::min(_data.size(), _max_folder);
+      res.anchor_folder_index = index % std::min(_data.size(), _max_folder);
       res.diff_folder_index = rand() % std::min(_data.size(), _max_folder);
       while (res.diff_folder_index == res.anchor_folder_index)
 	res.diff_folder_index = rand() % std::min(_data.size(), _max_folder);
