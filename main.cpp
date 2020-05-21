@@ -151,7 +151,7 @@ int main(int ac, char **av)
       std::cout << "======================" << std::endl;
       //plot(g, dataloader, model, o.folderLimit, o.fileLimit);
       plot(g, dataloader, model, 200, 100);
-      for (int i(0) ; i  < o.displayEvery ; ++i)
+      for (unsigned int i(0) ; i  < o.displayEvery ; ++i)
 	{
 	  std::cout << i << " -- " << train(dataloader, model, optimizer, o.margin) << std::endl;
 	  if (i % 200 == 0)

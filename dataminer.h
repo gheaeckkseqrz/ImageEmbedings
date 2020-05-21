@@ -14,8 +14,8 @@ class Dataminer : public Dataloader
    :Dataloader(data_path, size), _Z(Z)
     {
       for (std::vector<std::string> const &folder : _data)
-	_embedings.push_back(torch::zeros({folder.size(), _Z}));
-      _idEmbedings = torch::zeros({_data.size(), Z});
+	_embedings.push_back(torch::zeros({static_cast<long int>(folder.size()), _Z}));
+      _idEmbedings = torch::zeros({static_cast<long int>(_data.size()), Z});
     }
 
   virtual unsigned int addFolder(std::string const &path) override
