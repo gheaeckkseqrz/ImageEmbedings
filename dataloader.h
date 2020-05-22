@@ -118,7 +118,7 @@ class Dataloader : public torch::data::datasets::BatchDataset<Dataloader, Triple
   virtual Triplet get_batch(c10::ArrayRef<size_t> request)
   {
     unsigned int batch_size = request.size();
-    Triplet res;
+    Triplet res(batch_size);
     res.anchor = torch::zeros({batch_size, 3, static_cast<long int>(_size), static_cast<long int>(_size)});
     res.same = torch::zeros({batch_size, 3, static_cast<long int>(_size), static_cast<long int>(_size)});
     res.diff = torch::zeros({batch_size, 3, static_cast<long int>(_size), static_cast<long int>(_size)});
@@ -129,6 +129,11 @@ class Dataloader : public torch::data::datasets::BatchDataset<Dataloader, Triple
 	res.anchor[i].copy_(t.anchor);
 	res.same[i].copy_(t.same);
 	res.diff[i].copy_(t.diff);
+	res.anchor_folder_index[i] = t.anchor_folder_index[0];
+	res.diff_folder_index[i] = t.diff_folder_index[0];
+	res.anchor_index[i] = t.anchor_index[0];
+	res.same_index[i] = t.same_index[0];
+	res.diff_index[i] = t.same_index[0];
 	i++;
       }
     return res;
