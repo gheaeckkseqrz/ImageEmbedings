@@ -88,9 +88,9 @@ float train(Dataminer &dataloader, FeatureExtractor &model, torch::optim::Adam &
       torch::Tensor same_code = model->forward(training_triplet.same.unsqueeze(0));
       torch::Tensor diff_code = model->forward(training_triplet.diff.unsqueeze(0));
 
-      dataloader.setEmbedding(training_triplet.anchor_folder_index, training_triplet.anchor_index, anchor_code[0].data());
-      dataloader.setEmbedding(training_triplet.anchor_folder_index, training_triplet.same_index,   same_code[0].data());
-      dataloader.setEmbedding(training_triplet.diff_folder_index,   training_triplet.diff_index,   diff_code[0].data());
+      dataloader.setEmbedding(training_triplet.anchor_folder_index[0].item<int64_t>(), training_triplet.anchor_index[0].item<int64_t>(), anchor_code[0].data());
+      dataloader.setEmbedding(training_triplet.anchor_folder_index[0].item<int64_t>(), training_triplet.same_index[0].item<int64_t>(),   same_code[0].data());
+      dataloader.setEmbedding(training_triplet.diff_folder_index[0].item<int64_t>(),   training_triplet.diff_index[0].item<int64_t>(),   diff_code[0].data());
 
       torch::Tensor norm_same = torch::norm(same_code);
       torch::Tensor norm_diff = torch::norm(diff_code);

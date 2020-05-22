@@ -44,12 +44,12 @@ TEST_CASE( "Test limits", "[Dataloader]" )
     d.addFolder("../tests/data");
   d.setLimits(2, 2);
   Triplet t = d.get(0);
-  REQUIRE( t.anchor_folder_index < 2);
-  REQUIRE( t.diff_folder_index < 2);
-  REQUIRE( t.diff_folder_index != t.anchor_folder_index);
-  REQUIRE( t.anchor_index < 2 );
-  REQUIRE( t.same_index < 2 );
-  REQUIRE( t.diff_index < 2 );
+  REQUIRE( t.anchor_folder_index[0].item<int64_t>() < 2);
+  REQUIRE( t.diff_folder_index[0].item<int64_t>() < 2);
+  REQUIRE( t.diff_folder_index[0].item<int64_t>() != t.anchor_folder_index[0].item<int64_t>());
+  REQUIRE( t.anchor_index[0].item<int64_t>() < 2 );
+  REQUIRE( t.same_index[0].item<int64_t>() < 2 );
+  REQUIRE( t.diff_index[0].item<int64_t>() < 2 );
 }
 
 TEST_CASE( "Index to file folder", "[Dataloader]" )

@@ -95,16 +95,16 @@ class Dataminer : public Dataloader
 
     Triplet res;
     assert(_data.size() > 1);
-    res.anchor_folder_index = rand() % std::min(_data.size(), _max_folder);
-    res.anchor_index = rand() % std::min(_data[res.anchor_folder_index].size(), _max_file);
-    res.same_index = rand() % std::min(_data[res.anchor_folder_index].size(), _max_file);
+    res.anchor_folder_index[0] = static_cast<int64_t>(index % std::min(_data.size(), _max_folder));
+    res.anchor_index[0] = static_cast<int64_t>(rand() % std::min(_data[res.anchor_folder_index[0].item<int64_t>()].size(), _max_file));
+    res.same_index[0] = static_cast<int64_t>(rand() % std::min(_data[res.anchor_folder_index[0].item<int64_t>()].size(), _max_file));
 
-    res.diff_folder_index = findClosestIdentity(res.anchor_folder_index, res.anchor_index);
-    res.diff_index = rand() % std::min(_data[res.diff_folder_index].size(), _max_file);;
+    res.diff_folder_index[0] = static_cast<int64_t>(findClosestIdentity(res.anchor_folder_index[0].item<int64_t>(), res.anchor_index[0].item<int64_t>()));
+    res.diff_index[0] = static_cast<int64_t>(rand() % std::min(_data[res.diff_folder_index[0].item<int64_t>()].size(), _max_file));
 
-    res.anchor = getImage(res.anchor_folder_index, res.anchor_index, _size);
-    res.same = getImage(res.anchor_folder_index, res.same_index, _size);
-    res.diff = getImage(res.diff_folder_index, res.diff_index, _size);
+    res.anchor = getImage(res.anchor_folder_index[0].item<int64_t>(), res.anchor_index[0].item<int64_t>(), _size);
+    res.same = getImage(res.anchor_folder_index[0].item<int64_t>(), res.same_index[0].item<int64_t>(), _size);
+    res.diff = getImage(res.diff_folder_index[0].item<int64_t>(), res.diff_index[0].item<int64_t>(), _size);
     return res;
   }
 

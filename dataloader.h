@@ -11,15 +11,24 @@ namespace fs = std::filesystem;
 
 struct Triplet
 {
+  Triplet(unsigned int batch_size = 1)
+  {
+    anchor_folder_index = torch::zeros({batch_size}, torch::TensorOptions().dtype(torch::kInt64));
+    diff_folder_index = torch::zeros({batch_size}, torch::TensorOptions().dtype(torch::kInt64));
+    anchor_index = torch::zeros({batch_size}, torch::TensorOptions().dtype(torch::kInt64));
+    same_index = torch::zeros({batch_size}, torch::TensorOptions().dtype(torch::kInt64));
+    diff_index = torch::zeros({batch_size}, torch::TensorOptions().dtype(torch::kInt64));
+  }
+
   torch::Tensor anchor;
   torch::Tensor same;
   torch::Tensor diff;
 
-  unsigned int anchor_folder_index = -1;
-  unsigned int diff_folder_index = -1;
-  unsigned int anchor_index = -1;
-  unsigned int same_index = -1;
-  unsigned int diff_index = -1;
+  torch::Tensor anchor_folder_index;
+  torch::Tensor diff_folder_index;
+  torch::Tensor anchor_index;
+  torch::Tensor same_index;
+  torch::Tensor diff_index;
 };
 
 class Dataloader : public torch::data::datasets::BatchDataset<Dataloader, Triplet>
@@ -130,17 +139,17 @@ class Dataloader : public torch::data::datasets::BatchDataset<Dataloader, Triple
       (void)index;
       Triplet res;
       assert(_data.size() > 1);
-      res.anchor_folder_index = index % std::min(_data.size(), _max_folder);
-      res.diff_folder_index = rand() % std::min(_data.size(), _max_folder);
-      while (res.diff_folder_index == res.anchor_folder_index)
-	res.diff_folder_index = rand() % std::min(_data.size(), _max_folder);
-      res.anchor_index = rand() % std::min(_data[res.anchor_folder_index].size(), _max_file);
-      res.same_index = rand() % std::min(_data[res.anchor_folder_index].size(), _max_file);
-      res.diff_index = rand() % std::min(_data[res.diff_folder_index].size(), _max_file);
+      res.anchor_folder_index[0] = static_cast<int64_t>(index % std::min(_data.size(), _max_folder));
+      res.diff_folder_index[0] = static_cast<int64_t>(rand() % std::min(_data.size(), _max_folder));
+      while (res.diff_folder_index[0].item<int64_t>() == res.anchor_folder_index[0].item<int64_t>())
+	res.diff_folder_index[0] = static_cast<int64_t>(rand() % std::min(_data.size(), _max_folder));
+      res.anchor_index[0] = static_cast<int64_t>(rand() % std::min(_data[res.anchor_folder_index[0].item<int64_t>()].size(), _max_file));
+      res.same_index[0] = static_cast<int64_t>(rand() % std::min(_data[res.anchor_folder_index[0].item<int64_t>()].size(), _max_file));
+      res.diff_index[0] = static_cast<int64_t>(rand() % std::min(_data[res.diff_folder_index[0].item<int64_t>()].size(), _max_file));
 
-      res.anchor = getImage(res.anchor_folder_index, res.anchor_index, _size);
-      res.same = getImage(res.anchor_folder_index, res.same_index, _size);
-      res.diff = getImage(res.diff_folder_index, res.diff_index, _size);
+      res.anchor = getImage(res.anchor_folder_index[0].item<int64_t>(), res.anchor_index[0].item<int64_t>(), _size);
+      res.same = getImage(res.anchor_folder_index[0].item<int64_t>(), res.same_index[0].item<int64_t>(), _size);
+      res.diff = getImage(res.diff_folder_index[0].item<int64_t>(), res.diff_index[0].item<int64_t>(), _size);
       return res;
     }
 
