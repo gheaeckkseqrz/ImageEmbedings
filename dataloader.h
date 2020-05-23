@@ -119,9 +119,9 @@ class Dataloader : public torch::data::datasets::BatchDataset<Dataloader, Triple
   {
     unsigned int batch_size = request.size();
     Triplet res(batch_size);
-    res.anchor = torch::zeros({batch_size, 3, static_cast<long int>(_size), static_cast<long int>(_size)});
-    res.same = torch::zeros({batch_size, 3, static_cast<long int>(_size), static_cast<long int>(_size)});
-    res.diff = torch::zeros({batch_size, 3, static_cast<long int>(_size), static_cast<long int>(_size)});
+    res.anchor = torch::zeros({batch_size, 3, static_cast<long int>(_size), static_cast<long int>(_size)}).cuda();
+    res.same = torch::zeros({batch_size, 3, static_cast<long int>(_size), static_cast<long int>(_size)}).cuda();
+    res.diff = torch::zeros({batch_size, 3, static_cast<long int>(_size), static_cast<long int>(_size)}).cuda();
     unsigned int i(0);
     for (unsigned int _ : request)
       {
@@ -133,7 +133,7 @@ class Dataloader : public torch::data::datasets::BatchDataset<Dataloader, Triple
 	res.diff_folder_index[i] = t.diff_folder_index[0];
 	res.anchor_index[i] = t.anchor_index[0];
 	res.same_index[i] = t.same_index[0];
-	res.diff_index[i] = t.same_index[0];
+	res.diff_index[i] = t.diff_index[0];
 	i++;
       }
     return res;
@@ -160,10 +160,11 @@ class Dataloader : public torch::data::datasets::BatchDataset<Dataloader, Triple
 
   c10::optional<long unsigned int>  size() const
   {
-    unsigned int total(0);
-    for (auto const &folder : _data)
-      total += folder.size();
-    return total;
+    return _data.size();
+    // unsigned int total(0);
+    // for (auto const &folder : _data)
+    //   total += folder.size();
+    // return total;
   }
 
   size_t size(size_t until) const

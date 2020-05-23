@@ -1,6 +1,7 @@
 #include <torch/torch.h>
 #include <iostream>
 #include <cmath>
+#include <chrono>
 
 #include "feature_extractor.h"
 #include "dataminer.h"
@@ -13,22 +14,32 @@ int Z = 128;
 struct Options : public GUIDelegate
 {
 public:
-  virtual void increaseFileLimit() { fileLimit++; }
-  virtual void decreaseFileLimit() { fileLimit--; }
-  virtual void increaseFolderLimit() { folderLimit++; }
-  virtual void decreaseFolderLimit() { folderLimit--; }
-  virtual void increaseMargin() { margin += 0.01; }
-  virtual void decreaseMargin() { margin -= 0.01; }
-  virtual void increaseSampling() { sampling++; }
-  virtual void decreaseSampling() { sampling--; }
-  virtual void increaseDisplayEvery() { displayEvery++; }
-  virtual void decreaseDisplayEvery() { displayEvery--; }
+  virtual void increaseFileLimit()    { fileLimit++; print(); }
+  virtual void decreaseFileLimit()    { if (fileLimit > 0) fileLimit--; print(); }
+  virtual void increaseFolderLimit()  { folderLimit++; print(); }
+  virtual void decreaseFolderLimit()  { if (folderLimit > 0) folderLimit--; print();}
+  virtual void increaseMargin()       { margin += 0.01; print(); }
+  virtual void decreaseMargin()       { margin -= 0.01; print(); }
+  virtual void increaseSampling()     { sampling++; print(); }
+  virtual void decreaseSampling()     { sampling--; print(); }
+  virtual void increaseDisplayEvery() { displayEvery++; print(); }
+  virtual void decreaseDisplayEvery() { if (displayEvery > 0) displayEvery--; print(); }
+  void print()
+  {
+      std::cout << "======================" << std::endl;
+      std::cout << "Folders : " << folderLimit << std::endl;
+      std::cout << "Files   : " << fileLimit << std::endl;
+      std::cout << "Margin  : " << margin << std::endl;
+      std::cout << "Sampling  : " << sampling << std::endl;
+      std::cout << "DisplayEvery  : " << displayEvery << std::endl;
+      std::cout << "======================" << std::endl;
+  }
 
   size_t fileLimit = 100;
-  size_t folderLimit = 8724;
+  size_t folderLimit = 8700;
   float margin = .9;
   float sampling = 0;
-  unsigned int displayEvery = 5000;
+  unsigned int displayEvery = 6;
 };
 
 void plot(GUI &gui, Dataminer &dataloader, FeatureExtractor &model, size_t folder_limit, size_t file_limit)
@@ -67,6 +78,7 @@ void plot(GUI &gui, Dataminer &dataloader, FeatureExtractor &model, size_t folde
 
 float train(Dataminer &dataloader, FeatureExtractor &model, torch::optim::Adam &optimizer, float margin)
 {
+  unsigned int batch_size = 6;
   model->train();
   float total_loss = 0;
   torch::Tensor reference_target = torch::zeros(std::vector<int64_t>({Z})).cuda();
@@ -74,37 +86,52 @@ float train(Dataminer &dataloader, FeatureExtractor &model, torch::optim::Adam &
   torch::Tensor norm_target = torch::ones(std::vector<int64_t>({1})).cuda();
   norm_target.fill_(torch::norm(reference_target).item<float>());
 
-  torch::Tensor label_pos = torch::zeros(std::vector<int64_t>({1})).cuda();
-  torch::Tensor label_neg = torch::zeros(std::vector<int64_t>({1})).cuda();
+  torch::Tensor label_pos = torch::zeros(std::vector<int64_t>({batch_size})).cuda();
+  torch::Tensor label_neg = torch::zeros(std::vector<int64_t>({batch_size})).cuda();
 
   label_pos.fill_( 1);
   label_neg.fill_(-1);
 
-  optimizer.zero_grad();
-  for (unsigned int i(0) ; i < 32 ; ++i)
+  auto start = std::chrono::high_resolution_clock::now();
+  auto data_loader = torch::data::make_data_loader<torch::data::samplers::SequentialSampler>(dataloader, torch::data::DataLoaderOptions().batch_size(batch_size).workers(5));
+  unsigned int b(0);
+  for (Triplet &training_triplet : *data_loader)
     {
-      Triplet training_triplet = dataloader.get(0);
-      torch::Tensor anchor_code = model->forward(training_triplet.anchor.unsqueeze(0)); //.detach();
-      torch::Tensor same_code = model->forward(training_triplet.same.unsqueeze(0));
-      torch::Tensor diff_code = model->forward(training_triplet.diff.unsqueeze(0));
+      if (training_triplet.anchor_folder_index.sizes()[0] != batch_size)
+	break; // Drop Last
 
-      dataloader.setEmbedding(training_triplet.anchor_folder_index[0].item<int64_t>(), training_triplet.anchor_index[0].item<int64_t>(), anchor_code[0].data());
-      dataloader.setEmbedding(training_triplet.anchor_folder_index[0].item<int64_t>(), training_triplet.same_index[0].item<int64_t>(),   same_code[0].data());
-      dataloader.setEmbedding(training_triplet.diff_folder_index[0].item<int64_t>(),   training_triplet.diff_index[0].item<int64_t>(),   diff_code[0].data());
+      optimizer.zero_grad();
+      torch::Tensor anchor_code = model->forward(training_triplet.anchor);
+      torch::Tensor same_code = model->forward(training_triplet.same);
+      torch::Tensor diff_code = model->forward(training_triplet.diff);
 
-      torch::Tensor norm_same = torch::norm(same_code);
-      torch::Tensor norm_diff = torch::norm(diff_code);
+      for (unsigned int i(0) ; i < batch_size ; ++i)
+	{
+	  dataloader.setEmbedding(training_triplet.anchor_folder_index[i].item<int64_t>(), training_triplet.anchor_index[i].item<int64_t>(), anchor_code[i].data());
+	  dataloader.setEmbedding(training_triplet.anchor_folder_index[i].item<int64_t>(), training_triplet.same_index[i].item<int64_t>(),   same_code[i].data());
+	  dataloader.setEmbedding(training_triplet.diff_folder_index[i].item<int64_t>(),   training_triplet.diff_index[i].item<int64_t>(),   diff_code[i].data());
+	}
+
+      torch::Tensor norm_same = torch::norm(same_code, 2, 1);
+      torch::Tensor norm_diff = torch::norm(diff_code, 2, 1);
 
       torch::Tensor loss_same = torch::cosine_embedding_loss(same_code, anchor_code, label_pos, margin);
       torch::Tensor loss_diff = torch::cosine_embedding_loss(diff_code, anchor_code, label_neg, margin);
-      torch::Tensor loss_norm_same = torch::relu(norm_same - 0.8);
-      torch::Tensor loss_norm_diff = torch::relu(norm_diff - 0.8);
+      torch::Tensor loss_norm_same = torch::mean(torch::relu(norm_same - 0.8));
+      torch::Tensor loss_norm_diff = torch::mean(torch::relu(norm_diff - 0.8));
 
       torch::Tensor loss = loss_same + loss_diff + loss_norm_same + loss_norm_diff;
+      std::cout << "\r" << b << " / " << dataloader.size().value() / batch_size << " -- " << loss.item<float>();
+      std::cout.flush();
+      b++;
       total_loss += loss.item<float>();
       loss.backward();
+      optimizer.step();
     }
-  optimizer.step();
+  std::cout << std::endl;
+  auto stop = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::seconds>(stop - start);
+  std::cout << "Duration : " << duration.count() << " seconds" << std::endl;
   return total_loss;
 }
 
@@ -142,20 +169,13 @@ int main(int ac, char **av)
     {
       dataloader.setLimits(o.fileLimit, o.folderLimit);
       dataloader.setSampling(o.sampling);
-      std::cout << "======================" << std::endl;
-      std::cout << "Folders : " << o.folderLimit << std::endl;
-      std::cout << "Files   : " << o.fileLimit << std::endl;
-      std::cout << "Margin  : " << o.margin << std::endl;
-      std::cout << "Sampling  : " << o.sampling << std::endl;
-      std::cout << "DisplayEvery  : " << o.displayEvery << std::endl;
-      std::cout << "======================" << std::endl;
-      //plot(g, dataloader, model, o.folderLimit, o.fileLimit);
+      o.print();
+      // plot(g, dataloader, model, o.folderLimit, o.fileLimit);
       plot(g, dataloader, model, 200, 100);
       for (unsigned int i(0) ; i  < o.displayEvery ; ++i)
 	{
 	  std::cout << i << " -- " << train(dataloader, model, optimizer, o.margin) << std::endl;
-	  if (i % 200 == 0)
-	    dataloader.updateIdEmbedings();
+	  dataloader.updateIdEmbedings();
 	}
       torch::save(model, "model.pt");
       // o.folderLimit++;
