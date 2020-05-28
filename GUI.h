@@ -84,6 +84,13 @@ class GUI
     _max = 1;
   }
 
+  void showTriplet(std::string const &a, std::string const &s, std::string const &d)
+  {
+    _anchor = a;
+    _same = s;
+    _diff = d;
+  }
+
  private:
   void _start()
   {
@@ -170,6 +177,29 @@ class GUI
 	      _window.draw(shape);
 	    }
 	}
+	if (_anchor.size() && _same.size() && _diff.size())
+	  {
+	    sf::Sprite sprite1, sprite2, sprite3;
+	    sf::Texture texture1, texture2, texture3;
+	    texture1.loadFromFile(_anchor);
+	    texture2.loadFromFile(_same);
+	    texture3.loadFromFile(_diff);
+	    sf::Vector2u size1 = texture1.getSize();
+	    sf::Vector2u size2 = texture2.getSize();
+	    sf::Vector2u size3 = texture3.getSize();
+	    sprite1.setTexture(texture1);
+	    sprite2.setTexture(texture2);
+	    sprite3.setTexture(texture3);
+	    sprite1.setScale(256.0 / size1.x, 256.0 / size1.y);
+	    sprite2.setScale(256.0 / size2.x, 256.0 / size2.y);
+	    sprite3.setScale(256.0 / size3.x, 256.0 / size3.y);
+	    sprite1.setPosition(  0, 2000 - 256);
+	    sprite2.setPosition(256, 2000 - 256);
+	    sprite3.setPosition(512, 2000 - 256);
+	    _window.draw(sprite1);
+	    _window.draw(sprite2);
+	    _window.draw(sprite3);
+	  }
 	_window.display();
       }
   }
@@ -184,4 +214,9 @@ class GUI
   std::vector<sf::Color> _colors;
   GUIDelegate           *_delegate;
   double                 _max;
+
+  // Triplet Display
+  std::string _anchor;
+  std::string _same;
+  std::string _diff;
 };

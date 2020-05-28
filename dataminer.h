@@ -77,14 +77,12 @@ class Dataminer : public Dataloader
 
   unsigned int findClosestIdentity(unsigned int folder, unsigned int file) const
   {
-    torch::Tensor target = _embedings[folder][file].cuda();
+    torch::Tensor target = _embedings[folder][file].unsqueeze(0).cuda();
     torch::Tensor t = _idEmbedings.slice(0, 0, _max_folder, 1).clone().cuda();
-    t -= target;
-    t = t * t;
-    t = torch::sum(t, 1);
-    t[folder].fill_(std::numeric_limits<float>::max());
-    std::tuple<at::Tensor, at::Tensor> min = torch::min(t, 0);
-    return std::get<1>(min).item<int>();
+    t[folder].copy_(target[0] * -1);
+    torch::Tensor cosine_similarity = at::cosine_similarity(target, t);
+    std::tuple<at::Tensor, at::Tensor> max = torch::max(cosine_similarity, 0);
+    return std::get<1>(max).item<int>();
   }
 
   Triplet get(size_t index) override

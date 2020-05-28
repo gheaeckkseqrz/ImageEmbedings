@@ -141,7 +141,6 @@ class Dataloader : public torch::data::datasets::BatchDataset<Dataloader, Triple
 
   virtual Triplet get(size_t index)
     {
-      (void)index;
       Triplet res;
       assert(_data.size() > 1);
       res.anchor_folder_index[0] = static_cast<int64_t>(index % std::min(_data.size(), _max_folder));
@@ -161,10 +160,6 @@ class Dataloader : public torch::data::datasets::BatchDataset<Dataloader, Triple
   c10::optional<long unsigned int>  size() const
   {
     return _data.size();
-    // unsigned int total(0);
-    // for (auto const &folder : _data)
-    //   total += folder.size();
-    // return total;
   }
 
   size_t size(size_t until) const

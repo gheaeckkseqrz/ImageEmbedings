@@ -38,7 +38,7 @@ public:
   size_t fileLimit = 100;
   size_t folderLimit = 8700;
   float margin = .9;
-  float sampling = 0;
+  float sampling = 100;
   unsigned int displayEvery = 6;
 };
 
@@ -174,8 +174,12 @@ int main(int ac, char **av)
       plot(g, dataloader, model, 200, 100);
       for (unsigned int i(0) ; i  < o.displayEvery ; ++i)
 	{
-	  std::cout << i << " -- " << train(dataloader, model, optimizer, o.margin) << std::endl;
 	  dataloader.updateIdEmbedings();
+	  std::cout << i << " -- " << train(dataloader, model, optimizer, o.margin) << std::endl;
+	  Triplet t = dataloader.get(rand());
+	  g.showTriplet(dataloader.getPath(t.anchor_folder_index[0].item<int64_t>(), t.anchor_index[0].item<int64_t>()),
+			dataloader.getPath(t.anchor_folder_index[0].item<int64_t>(), t.same_index[0].item<int64_t>()),
+			dataloader.getPath(t.diff_folder_index[0].item<int64_t>(), t.diff_index[0].item<int64_t>()));
 	}
       torch::save(model, "model.pt");
       // o.folderLimit++;
