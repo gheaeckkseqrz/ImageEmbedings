@@ -85,6 +85,15 @@ class Dataminer : public Dataloader
     return std::get<1>(max).item<int>();
   }
 
+  unsigned int findFurthestPoint(unsigned int folder, unsigned int file) const
+  {
+    torch::Tensor target = _embedings[folder][file].unsqueeze(0).cuda();
+    torch::Tensor t = _embedings[folder].slice(0, 0, _max_file, 1).clone().cuda();
+    torch::Tensor cosine_similarity = at::cosine_similarity(target, t);
+    std::tuple<at::Tensor, at::Tensor> min = torch::min(cosine_similarity, 0);
+    return std::get<1>(min).item<int>();
+  }
+
   Triplet get(size_t index) override
   {
     (void)index;
@@ -95,7 +104,7 @@ class Dataminer : public Dataloader
     assert(_data.size() > 1);
     res.anchor_folder_index[0] = static_cast<int64_t>(index % std::min(_data.size(), _max_folder));
     res.anchor_index[0] = static_cast<int64_t>(rand() % std::min(_data[res.anchor_folder_index[0].item<int64_t>()].size(), _max_file));
-    res.same_index[0] = static_cast<int64_t>(rand() % std::min(_data[res.anchor_folder_index[0].item<int64_t>()].size(), _max_file));
+    res.same_index[0] = static_cast<int64_t>(findFurthestPoint(res.anchor_folder_index[0].item<int64_t>(), res.anchor_index[0].item<int64_t>()));
 
     res.diff_folder_index[0] = static_cast<int64_t>(findClosestIdentity(res.anchor_folder_index[0].item<int64_t>(), res.anchor_index[0].item<int64_t>()));
     res.diff_index[0] = static_cast<int64_t>(rand() % std::min(_data[res.diff_folder_index[0].item<int64_t>()].size(), _max_file));
