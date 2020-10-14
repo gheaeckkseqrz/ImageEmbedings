@@ -5,76 +5,10 @@
 
 #include "feature_extractor.h"
 #include "dataminer.h"
-#include "feature_extractor.h"
-#include "GUI.h"
-#include "tsne.h"
 
-int Z = 128;
-
-struct Options : public GUIDelegate
-{
-public:
-  virtual void increaseFileLimit()    { fileLimit++; print(); }
-  virtual void decreaseFileLimit()    { if (fileLimit > 0) fileLimit--; print(); }
-  virtual void increaseFolderLimit()  { folderLimit++; print(); }
-  virtual void decreaseFolderLimit()  { if (folderLimit > 0) folderLimit--; print();}
-  virtual void increaseMargin()       { margin += 0.01; print(); }
-  virtual void decreaseMargin()       { margin -= 0.01; print(); }
-  virtual void increaseSampling()     { sampling++; print(); }
-  virtual void decreaseSampling()     { sampling--; print(); }
-  virtual void increaseDisplayEvery() { displayEvery++; print(); }
-  virtual void decreaseDisplayEvery() { if (displayEvery > 0) displayEvery--; print(); }
-  void print()
-  {
-      std::cout << "======================" << std::endl;
-      std::cout << "Folders : " << folderLimit << std::endl;
-      std::cout << "Files   : " << fileLimit << std::endl;
-      std::cout << "Margin  : " << margin << std::endl;
-      std::cout << "Sampling  : " << sampling << std::endl;
-      std::cout << "DisplayEvery  : " << displayEvery << std::endl;
-      std::cout << "======================" << std::endl;
-  }
-
-  size_t fileLimit = 100;
-  size_t folderLimit = 8700;
-  float margin = .9;
-  float sampling = 100;
-  unsigned int displayEvery = 6;
-};
-
-void plot(GUI &gui, Dataminer &dataloader, FeatureExtractor &model, size_t folder_limit, size_t file_limit)
-{
-  folder_limit = std::min(folder_limit, dataloader.nbIdentities());
-  unsigned int N = dataloader.size(folder_limit);
-  torch::Tensor tsneInput = torch::zeros({N, Z});
-  torch::Tensor tsneOutput = torch::zeros({N, 2u}, torch::kDouble);
-  unsigned int j(0);
-  model->eval();
-  for (unsigned int folder(0) ; folder < folder_limit ; ++folder)
-  {
-    std::cout << "\rPlot " << folder+1 << " / " << folder_limit;
-    std::cout.flush();
-    for (unsigned int i(0) ; i < std::min(file_limit, dataloader.identitySize(folder)) ; ++i)
-      {
-	torch::Tensor image = dataloader.getImage(folder, i).unsqueeze(0);
-	torch::Tensor code = model->forward(image);
-	// dataloader.setEmbedding(folder, i, code[0].data());
-	tsneInput[j].copy_(code[0].data());
-	j++;
-      }
-  }
-  tsneInput = tsneInput.to(torch::kDouble);
-  TSNE::run(tsneInput.data_ptr<double>(), N, Z, tsneOutput.data_ptr<double>(), 2, 50, .5, -1, false, 1000, 250, 250);
-  j = 0;
-  for (unsigned int folder(0) ; folder < folder_limit ; ++folder)
-    for (unsigned int i(0) ; i < std::min(file_limit, dataloader.identitySize(folder)) ; ++i)
-      {
-	gui.addPoint(tsneOutput[j][0].item<float>(), tsneOutput[j][1].item<float>(), folder, dataloader.getPath(folder, i));
-	j++;
-      }
-  gui.update();
-  std::cout << std::endl;
-}
+constexpr unsigned int Z = 512;
+constexpr unsigned int SAVE_EVERY = 16;
+constexpr float MARGIN = .9;
 
 float train(Dataminer &dataloader, FeatureExtractor &model, torch::optim::Adam &optimizer, float margin)
 {
@@ -143,21 +77,18 @@ int main(int ac, char **av)
       return -1;
     }
 
-  Options o;
-  GUI g(&o);
-  g.start();
   Dataminer dataloader(Z, av[1], 256);
   //dataloader.fillCache(200, 100);
   FeatureExtractor model(32, Z);
-  torch::load(model, "model.pt");
+  //torch::load(model, "model.pt");
   model->to(at::kCUDA);
   torch::optim::Adam optimizer(model->parameters(), 0.0001);
 
   // Get a couple of point for sampling
   std::cout << "Initial pass" << std::endl;
-  for (unsigned int folder(0) ; folder < std::min(o.folderLimit, dataloader.nbIdentities()) ; ++folder)
+  for (unsigned int folder(0) ; folder < dataloader.nbIdentities() ; ++folder)
     {
-      std::cout << "\r" << folder << " / " << o.folderLimit;
+      std::cout << "\r" << folder << " / " << dataloader.nbIdentities();
       std::cout.flush();
       torch::Tensor image = dataloader.getImage(folder, 0).unsqueeze(0);
       torch::Tensor code = model->forward(image);
@@ -167,22 +98,13 @@ int main(int ac, char **av)
 
   while (true)
     {
-      dataloader.setLimits(o.fileLimit, o.folderLimit);
-      dataloader.setSampling(o.sampling);
-      o.print();
-      // plot(g, dataloader, model, o.folderLimit, o.fileLimit);
-      plot(g, dataloader, model, 200, 100);
-      for (unsigned int i(0) ; i  < o.displayEvery ; ++i)
+      for (unsigned int i(0) ; i  < SAVE_EVERY ; ++i)
 	{
 	  dataloader.updateIdEmbedings();
-	  std::cout << i << " -- " << train(dataloader, model, optimizer, o.margin) << std::endl;
-	  Triplet t = dataloader.get(rand());
-	  g.showTriplet(dataloader.getPath(t.anchor_folder_index[0].item<int64_t>(), t.anchor_index[0].item<int64_t>()),
-			dataloader.getPath(t.anchor_folder_index[0].item<int64_t>(), t.same_index[0].item<int64_t>()),
-			dataloader.getPath(t.diff_folder_index[0].item<int64_t>(), t.diff_index[0].item<int64_t>()));
+	  float loss = train(dataloader, model, optimizer, MARGIN);
+	  std::cout << i << " -- " << loss << std::endl;
 	}
-      torch::save(model, "model.pt");
-      // o.folderLimit++;
+      torch::save(model, "feature_extractor.pt");
     }
 
   return 0;
