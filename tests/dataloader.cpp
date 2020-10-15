@@ -133,3 +133,12 @@ TEST_CASE( "Use with dataloader", "[Dataloader]")
   ++batch;
   REQUIRE( batch == data_loader->end() );
 }
+
+TEST_CASE( "Test filtering", "[Dataloader]")
+{
+  Dataloader d(256, "red.png");
+  d.addFolder("../tests/data");
+  REQUIRE( *d.size() == 1 );
+  REQUIRE( d.nbIdentities() == 1 );
+  REQUIRE( d.nbImages() == 1 );
+}

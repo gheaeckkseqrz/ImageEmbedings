@@ -34,11 +34,11 @@ struct Triplet
 class Dataloader : public torch::data::datasets::BatchDataset<Dataloader, Triplet>
 {
  public:
-  Dataloader(unsigned int image_resolution = 256)
-    :_nb_images(0), _image_resolution(image_resolution) {}
+  Dataloader(unsigned int image_resolution = 256, std::string filter = "")
+    :_nb_images(0), _image_resolution(image_resolution), _filter(filter) {}
 
- Dataloader(std::string const &data_path, unsigned int image_resolution = 256)
-   :_nb_images(0), _image_resolution(image_resolution)
+ Dataloader(std::string const &data_path, unsigned int image_resolution = 256, std::string filter = "")
+   :_nb_images(0), _image_resolution(image_resolution), _filter(filter)
     {
       unsigned int min = std::numeric_limits<unsigned int>::max();
       unsigned int max = std::numeric_limits<unsigned int>::min();
@@ -76,6 +76,7 @@ class Dataloader : public torch::data::datasets::BatchDataset<Dataloader, Triple
     std::vector<std::string> file_list;
     for (const auto & entry : fs::directory_iterator(path))
       if (fs::is_regular_file(entry) && isImage(entry.path()))
+	if (_filter.empty() || entry.path().filename() == _filter)
 	  file_list.push_back(entry.path());
     _nb_images += file_list.size();
     if (!file_list.empty())
@@ -213,6 +214,7 @@ protected:
   size_t _max_file;
   size_t _nb_images;
   size_t _image_resolution;
+  std::string _filter;
   std::vector<std::vector<std::string>> _data;
   std::vector<std::vector<torch::Tensor>> _cache;
 };
