@@ -55,7 +55,7 @@ float train(Dataminer &dataloader, FeatureExtractor &model, torch::optim::Adam &
       torch::Tensor loss_norm_diff = torch::mean(torch::relu(norm_diff - 0.8));
 
       torch::Tensor loss = loss_same + loss_diff + loss_norm_same + loss_norm_diff;
-      std::cout << "\r" << b << " / " << dataloader.size().value() / batch_size << " -- " << loss.item<float>();
+      std::cout << "\r" << b << " / " << dataloader.nbIdentities() / batch_size << " -- " << loss.item<float>();
       std::cout.flush();
       b++;
       total_loss += loss.item<float>();

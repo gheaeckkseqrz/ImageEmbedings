@@ -6,11 +6,17 @@ TEST_CASE( "Test size", "[Dataloader]" )
 {
   Dataloader d;
   d.addFolder("../tests/data");
+  REQUIRE( *d.size() == 1 );
+  REQUIRE( d.nbIdentities() == 1 );
+  REQUIRE( d.nbImages() == 3 );
+  d.addFolder("../tests/data");
+  REQUIRE( *d.size() == 2 );
+  REQUIRE( d.nbIdentities() == 2 );
+  REQUIRE( d.nbImages() == 6 );
+  d.addFolder("../tests/data");
   REQUIRE( *d.size() == 3 );
-  d.addFolder("../tests/data");
-  REQUIRE( *d.size() == 6 );
-  d.addFolder("../tests/data");
-  REQUIRE( *d.size() == 9 );
+  REQUIRE( d.nbIdentities() == 3 );
+  REQUIRE( d.nbImages() == 9 );
 }
 
 TEST_CASE( "Test default image size", "[Dataloader]" )
@@ -58,7 +64,10 @@ TEST_CASE( "Index to file folder", "[Dataloader]" )
   d.addFolder("../tests/data");
   d.addFolder("../tests/data");
   d.addFolder("../tests/data");
-  REQUIRE( *d.size() == 9u );
+  REQUIRE( *d.size() == 3u );
+  REQUIRE( d.nbIdentities() == 3 );
+  REQUIRE( d.nbImages() == 9 );
+
 
   // Folder 1
   REQUIRE( d.findFolderAndFileForIndex(0) == std::make_pair(0u, 0u) );
@@ -79,10 +88,11 @@ TEST_CASE( "Index to file folder", "[Dataloader]" )
 TEST_CASE( "Use with dataloader", "[Dataloader]")
 {
   Dataloader d(12);
-  d.addFolder("../tests/data");
-  d.addFolder("../tests/data");
-  d.addFolder("../tests/data");
+  for (unsigned int i(0) ; i < 9 ; ++i)
+    d.addFolder("../tests/data");
   REQUIRE( *d.size() == 9u );
+  REQUIRE( d.nbIdentities() == 9 );
+  REQUIRE( d.nbImages() == 27 );
 
   auto data_loader = torch::data::make_data_loader<torch::data::samplers::SequentialSampler>(d, 4);
   auto batch = data_loader->begin();
@@ -98,7 +108,7 @@ TEST_CASE( "Use with dataloader", "[Dataloader]")
   REQUIRE( batch->anchor_folder_index[0].item<int64_t>() == 0 );
   REQUIRE( batch->anchor_folder_index[1].item<int64_t>() == 1 );
   REQUIRE( batch->anchor_folder_index[2].item<int64_t>() == 2 );
-  REQUIRE( batch->anchor_folder_index[3].item<int64_t>() == 0 );
+  REQUIRE( batch->anchor_folder_index[3].item<int64_t>() == 3 );
   ++batch;
   REQUIRE( batch->anchor.sizes() == std::vector<int64_t>{4, 3, 12, 12} );
   REQUIRE( batch->diff.sizes()   == std::vector<int64_t>{4, 3, 12, 12} );
@@ -107,10 +117,10 @@ TEST_CASE( "Use with dataloader", "[Dataloader]")
   REQUIRE( batch->diff_folder_index.sizes() == std::vector<int64_t>{4} );
   REQUIRE( batch->same_index.sizes() == std::vector<int64_t>{4} );
   REQUIRE( batch->diff_index.sizes() == std::vector<int64_t>{4} );
-  REQUIRE( batch->anchor_folder_index[0].item<int64_t>() == 1 );
-  REQUIRE( batch->anchor_folder_index[1].item<int64_t>() == 2 );
-  REQUIRE( batch->anchor_folder_index[2].item<int64_t>() == 0 );
-  REQUIRE( batch->anchor_folder_index[3].item<int64_t>() == 1 );
+  REQUIRE( batch->anchor_folder_index[0].item<int64_t>() == 4 );
+  REQUIRE( batch->anchor_folder_index[1].item<int64_t>() == 5 );
+  REQUIRE( batch->anchor_folder_index[2].item<int64_t>() == 6 );
+  REQUIRE( batch->anchor_folder_index[3].item<int64_t>() == 7 );
   ++batch;
   REQUIRE( batch->anchor.sizes() == std::vector<int64_t>{1, 3, 12, 12} );
   REQUIRE( batch->diff.sizes()   == std::vector<int64_t>{1, 3, 12, 12} );
@@ -119,7 +129,7 @@ TEST_CASE( "Use with dataloader", "[Dataloader]")
   REQUIRE( batch->diff_folder_index.sizes() == std::vector<int64_t>{1} );
   REQUIRE( batch->same_index.sizes() == std::vector<int64_t>{1} );
   REQUIRE( batch->diff_index.sizes() == std::vector<int64_t>{1} );
-  REQUIRE( batch->anchor_folder_index[0].item<int64_t>() == 2 );
+  REQUIRE( batch->anchor_folder_index[0].item<int64_t>() == 8 );
   ++batch;
   REQUIRE( batch == data_loader->end() );
 }

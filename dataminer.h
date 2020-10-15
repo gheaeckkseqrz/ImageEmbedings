@@ -109,9 +109,9 @@ class Dataminer : public Dataloader
     res.diff_folder_index[0] = static_cast<int64_t>(findClosestIdentity(res.anchor_folder_index[0].item<int64_t>(), res.anchor_index[0].item<int64_t>()));
     res.diff_index[0] = static_cast<int64_t>(rand() % std::min(_data[res.diff_folder_index[0].item<int64_t>()].size(), _max_file));
 
-    res.anchor = getImage(res.anchor_folder_index[0].item<int64_t>(), res.anchor_index[0].item<int64_t>(), _size);
-    res.same = getImage(res.anchor_folder_index[0].item<int64_t>(), res.same_index[0].item<int64_t>(), _size);
-    res.diff = getImage(res.diff_folder_index[0].item<int64_t>(), res.diff_index[0].item<int64_t>(), _size);
+    res.anchor = getImage(res.anchor_folder_index[0].item<int64_t>(), res.anchor_index[0].item<int64_t>(), _image_resolution);
+    res.same = getImage(res.anchor_folder_index[0].item<int64_t>(), res.same_index[0].item<int64_t>(), _image_resolution);
+    res.diff = getImage(res.diff_folder_index[0].item<int64_t>(), res.diff_index[0].item<int64_t>(), _image_resolution);
     return res;
   }
 

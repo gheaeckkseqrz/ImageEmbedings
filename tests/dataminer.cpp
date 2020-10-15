@@ -6,7 +6,9 @@ TEST_CASE( "Initial state", "[Dataminer]" )
 {
   Dataminer d(12);
   d.addFolder("../tests/data");
-  REQUIRE( *d.size() == 3 );
+  REQUIRE( *d.size() == 1 );
+  REQUIRE( d.nbIdentities() == 1 );
+  REQUIRE( d.nbImages() == 3 );
   torch::Tensor embedding = d.getEmbedding(1);
   REQUIRE( embedding.sizes() == std::vector<int64_t>({12}) );
   for (unsigned int i(0) ; i < 12 ; ++i)
@@ -21,7 +23,9 @@ TEST_CASE( "Set/Get embedding", "[Dataminer]" )
   // Add 30 items
   for (unsigned int i(0) ; i < 10 ; ++i)
     d.addFolder("../tests/data");
-  REQUIRE( *d.size() == 30 );
+  REQUIRE( *d.size() == 10 );
+  REQUIRE( d.nbIdentities() == 10 );
+  REQUIRE( d.nbImages() == 30 );
 
   // Check everything is initialized to 0
   for (unsigned int i(0) ; i < 30 ; ++i)
@@ -69,7 +73,10 @@ TEST_CASE( "Find Closest", "[Dataminer]" )
   // Add 6 items
   d.addFolder("../tests/data");
   d.addFolder("../tests/data");
-  REQUIRE( *d.size() == 6 );
+  REQUIRE( *d.size() == 2 );
+  REQUIRE( d.nbIdentities() == 2 );
+  REQUIRE( d.nbImages() == 6 );
+
 
   // Set embeddings folder 1
   torch::Tensor t1 = torch::zeros({Z});

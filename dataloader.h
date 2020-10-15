@@ -34,17 +34,17 @@ struct Triplet
 class Dataloader : public torch::data::datasets::BatchDataset<Dataloader, Triplet>
 {
  public:
-  Dataloader( unsigned int size = 256)
-    :_size(size) {}
+  Dataloader(unsigned int image_resolution = 256)
+    :_nb_images(0), _image_resolution(image_resolution) {}
 
- Dataloader(std::string const &data_path, unsigned int size = 256)
-   :_size(size)
+ Dataloader(std::string const &data_path, unsigned int image_resolution = 256)
+   :_nb_images(0), _image_resolution(image_resolution)
     {
       unsigned int min = std::numeric_limits<unsigned int>::max();
       unsigned int max = std::numeric_limits<unsigned int>::min();
       for (const auto & entry : fs::directory_iterator(data_path))
 	{
-	  if (entry.is_directory())
+	  if (fs::is_directory(entry))
 	    {
 	      unsigned int s = this->addFolder(entry.path());
 	      min = std::min(s, min);
@@ -75,8 +75,9 @@ class Dataloader : public torch::data::datasets::BatchDataset<Dataloader, Triple
   {
     std::vector<std::string> file_list;
     for (const auto & entry : fs::directory_iterator(path))
-      if (entry.is_regular_file() && isImage(entry.path()))
+      if (fs::is_regular_file(entry) && isImage(entry.path()))
 	  file_list.push_back(entry.path());
+    _nb_images += file_list.size();
     if (!file_list.empty())
       {
 	_data.emplace_back(std::move(file_list));
@@ -93,7 +94,7 @@ class Dataloader : public torch::data::datasets::BatchDataset<Dataloader, Triple
 	std::cout.flush();
 	_cache.push_back(std::vector<torch::Tensor>());
 	for (unsigned int j(0) ; j < files ; ++j)
-	  _cache.back().push_back(loadImage(_data[i][j], _size).cuda());
+	  _cache.back().push_back(loadImage(_data[i][j], _image_resolution).cuda());
       }
     std::cout << std::endl;
   }
@@ -105,7 +106,7 @@ class Dataloader : public torch::data::datasets::BatchDataset<Dataloader, Triple
 
   torch::Tensor getImage(unsigned int folder, unsigned file) const
     {
-      return getImage(folder, file, _size);
+      return getImage(folder, file, _image_resolution);
     }
 
   torch::Tensor getImage(unsigned int folder, unsigned file, unsigned int size) const
@@ -119,9 +120,9 @@ class Dataloader : public torch::data::datasets::BatchDataset<Dataloader, Triple
   {
     unsigned int batch_size = request.size();
     Triplet res(batch_size);
-    res.anchor = torch::zeros({batch_size, 3, static_cast<long int>(_size), static_cast<long int>(_size)}).cuda();
-    res.same = torch::zeros({batch_size, 3, static_cast<long int>(_size), static_cast<long int>(_size)}).cuda();
-    res.diff = torch::zeros({batch_size, 3, static_cast<long int>(_size), static_cast<long int>(_size)}).cuda();
+    res.anchor = torch::zeros({batch_size, 3, static_cast<long int>(_image_resolution), static_cast<long int>(_image_resolution)}).cuda();
+    res.same = torch::zeros({batch_size, 3, static_cast<long int>(_image_resolution), static_cast<long int>(_image_resolution)}).cuda();
+    res.diff = torch::zeros({batch_size, 3, static_cast<long int>(_image_resolution), static_cast<long int>(_image_resolution)}).cuda();
     unsigned int i(0);
     for (unsigned int _ : request)
       {
@@ -151,15 +152,17 @@ class Dataloader : public torch::data::datasets::BatchDataset<Dataloader, Triple
       res.same_index[0] = static_cast<int64_t>(rand() % std::min(_data[res.anchor_folder_index[0].item<int64_t>()].size(), _max_file));
       res.diff_index[0] = static_cast<int64_t>(rand() % std::min(_data[res.diff_folder_index[0].item<int64_t>()].size(), _max_file));
 
-      res.anchor = getImage(res.anchor_folder_index[0].item<int64_t>(), res.anchor_index[0].item<int64_t>(), _size);
-      res.same = getImage(res.anchor_folder_index[0].item<int64_t>(), res.same_index[0].item<int64_t>(), _size);
-      res.diff = getImage(res.diff_folder_index[0].item<int64_t>(), res.diff_index[0].item<int64_t>(), _size);
+      res.anchor = getImage(res.anchor_folder_index[0].item<int64_t>(), res.anchor_index[0].item<int64_t>(), _image_resolution);
+      res.same = getImage(res.anchor_folder_index[0].item<int64_t>(), res.same_index[0].item<int64_t>(), _image_resolution);
+      res.diff = getImage(res.diff_folder_index[0].item<int64_t>(), res.diff_index[0].item<int64_t>(), _image_resolution);
       return res;
     }
 
-  c10::optional<long unsigned int>  size() const
+  // Size return the number of identities, as we want a full iteration
+  // over the dataset to select each identity as an anchor once.
+  c10::optional<long unsigned int> size() const
   {
-    return _data.size();
+    return nbIdentities();
   }
 
   size_t size(size_t until) const
@@ -173,6 +176,11 @@ class Dataloader : public torch::data::datasets::BatchDataset<Dataloader, Triple
   size_t nbIdentities() const
   {
     return _data.size();
+  }
+
+  size_t nbImages() const
+  {
+    return _nb_images;
   }
 
   size_t identitySize(size_t id) const
@@ -203,7 +211,8 @@ class Dataloader : public torch::data::datasets::BatchDataset<Dataloader, Triple
 protected:
   size_t _max_folder;
   size_t _max_file;
-  size_t _size;
+  size_t _nb_images;
+  size_t _image_resolution;
   std::vector<std::vector<std::string>> _data;
   std::vector<std::vector<torch::Tensor>> _cache;
 };
