@@ -9,7 +9,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 include_directories(. ${OpenCV_INCLUDE_DIRS})
 
 add_executable(ImageEmbeddings main.cpp images.cpp tsne.cpp sptree.cpp)
-target_link_libraries(ImageEmbeddings ${TORCH_LIBRARIES} ${OpenCV_LIBS})
+target_link_libraries(ImageEmbeddings ${TORCH_LIBRARIES} ${OpenCV_LIBS} stdc++fs)
 
 enable_testing()
 add_subdirectory(tests)
