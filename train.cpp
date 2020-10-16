@@ -7,7 +7,7 @@
 #include "dataminer.h"
 
 constexpr unsigned int Z = 512;
-constexpr unsigned int SAVE_EVERY = 16;
+constexpr unsigned int SAVE_EVERY = 1;
 constexpr float MARGIN = .9;
 
 float train(Dataminer &dataloader, FeatureExtractor &model, torch::optim::Adam &optimizer, float margin)
