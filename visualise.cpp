@@ -52,6 +52,7 @@ int main(int ac, char **av)
 	  i++;
 	  std::string path = dataloader.getPath(identity, image);
 	  std::cout << path << std::endl;
+	  break;
 	}
     }
 
@@ -71,6 +72,7 @@ int main(int ac, char **av)
 	  float y = projection[j][1].item<float>();
 	  ui.addPoint(x, y, identity, dataloader.getPath(identity, image));
 	  j++;
+	  break;
 	}
     }
   ui.update();

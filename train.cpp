@@ -96,6 +96,7 @@ int main(int ac, char **av)
     }
   std::cout << std::endl;
 
+  std::ofstream loss_file("loss.txt");
   while (true)
     {
       for (unsigned int i(0) ; i  < SAVE_EVERY ; ++i)
@@ -103,6 +104,7 @@ int main(int ac, char **av)
 	  dataloader.updateIdEmbedings();
 	  float loss = train(dataloader, model, optimizer, MARGIN);
 	  std::cout << i << " -- " << loss << std::endl;
+	  loss_file << loss << std::endl;
 	}
       torch::save(model, "feature_extractor.pt");
     }
