@@ -5,6 +5,7 @@
 TEST_CASE( "OutputSize", "[FeatureExtractor]" )
 {
   FeatureExtractor fe(1, 12);
+  fe->eval();
   {
     torch::Tensor input = torch::rand({1, 3, 256, 256});
     torch::Tensor output = fe->forward(input);

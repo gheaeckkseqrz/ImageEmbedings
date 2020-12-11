@@ -6,7 +6,7 @@ class Dataminer : public Dataloader
 {
  public:
  Dataminer(unsigned int Z, unsigned int size = 256)
-   :Dataloader(size), _Z(Z)
+   :Dataloader(size), _Z(Z), _sampling(100)
     {
     }
 
