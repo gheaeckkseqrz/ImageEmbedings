@@ -5,11 +5,10 @@
 
 #include "feature_extractor.h"
 #include "dataloader.h"
+#include "z.h"
 
 #include "GUI.h"
 #include "tsne.h"
-
-constexpr unsigned int Z = 512;
 
 torch::Tensor tsne(torch::Tensor tsneInput)
 {

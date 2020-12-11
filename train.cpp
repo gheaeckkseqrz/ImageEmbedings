@@ -5,8 +5,8 @@
 
 #include "feature_extractor.h"
 #include "dataminer.h"
+#include "z.h"
 
-constexpr unsigned int Z = 512;
 constexpr unsigned int SAVE_EVERY = 1;
 constexpr float MARGIN = .9;
 
@@ -80,7 +80,7 @@ int main(int ac, char **av)
   Dataminer dataloader(Z, av[1], 256);
   //dataloader.fillCache(200, 100);
   FeatureExtractor model(32, Z);
-  //torch::load(model, "model.pt");
+  //torch::load(model, "feature_extractor.pt");
   model->to(at::kCUDA);
   torch::optim::Adam optimizer(model->parameters(), 0.0001);
 
