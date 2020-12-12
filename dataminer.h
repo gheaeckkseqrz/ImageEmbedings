@@ -5,13 +5,13 @@
 class Dataminer : public Dataloader
 {
  public:
- Dataminer(unsigned int Z, unsigned int size = 256)
-   :Dataloader(size), _Z(Z), _sampling(100)
+  Dataminer(unsigned int Z, unsigned int size = 256, std::string filter = "", torch::Device device = torch::kCPU)
+    :Dataloader(size, filter, device), _Z(Z), _sampling(100)
     {
     }
 
- Dataminer(unsigned int Z, std::string const &data_path, unsigned int size = 256)
-   :Dataloader(data_path, size), _Z(Z)
+  Dataminer(unsigned int Z, std::string const &data_path, unsigned int size = 256, std::string filter = "", torch::Device device = torch::kCPU)
+    :Dataloader(data_path, size, filter, device), _Z(Z)
     {
       for (std::vector<std::string> const &folder : _data)
 	_embedings.push_back(torch::zeros({static_cast<long int>(folder.size()), _Z}));
@@ -77,8 +77,8 @@ class Dataminer : public Dataloader
 
   unsigned int findClosestIdentity(unsigned int folder, unsigned int file) const
   {
-    torch::Tensor target = _embedings[folder][file].unsqueeze(0).cuda();
-    torch::Tensor t = _idEmbedings.slice(0, 0, _max_folder, 1).clone().cuda();
+    torch::Tensor target = _embedings[folder][file].unsqueeze(0).to(_device);
+    torch::Tensor t = _idEmbedings.slice(0, 0, _max_folder, 1).clone().to(_device);
     t[folder].copy_(target[0] * -1);
     torch::Tensor cosine_similarity = at::cosine_similarity(target, t);
     std::tuple<at::Tensor, at::Tensor> max = torch::max(cosine_similarity, 0);
@@ -87,8 +87,8 @@ class Dataminer : public Dataloader
 
   unsigned int findFurthestPoint(unsigned int folder, unsigned int file) const
   {
-    torch::Tensor target = _embedings[folder][file].unsqueeze(0).cuda();
-    torch::Tensor t = _embedings[folder].slice(0, 0, _max_file, 1).clone().cuda();
+    torch::Tensor target = _embedings[folder][file].unsqueeze(0).to(_device);
+    torch::Tensor t = _embedings[folder].slice(0, 0, _max_file, 1).clone().to(_device);
     torch::Tensor cosine_similarity = at::cosine_similarity(target, t);
     std::tuple<at::Tensor, at::Tensor> min = torch::min(cosine_similarity, 0);
     return std::get<1>(min).item<int>();

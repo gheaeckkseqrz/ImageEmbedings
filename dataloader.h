@@ -34,11 +34,11 @@ struct Triplet
 class Dataloader : public torch::data::datasets::BatchDataset<Dataloader, Triplet>
 {
  public:
-  Dataloader(unsigned int image_resolution = 256, std::string filter = "")
-    :_nb_images(0), _image_resolution(image_resolution), _filter(filter) {}
+  Dataloader(unsigned int image_resolution = 256, std::string filter = "", torch::Device device = torch::kCPU)
+    :_device(device), _nb_images(0), _image_resolution(image_resolution), _filter(filter) {}
 
- Dataloader(std::string const &data_path, unsigned int image_resolution = 256, std::string filter = "")
-   :_nb_images(0), _image_resolution(image_resolution), _filter(filter)
+ Dataloader(std::string const &data_path, unsigned int image_resolution = 256, std::string filter = "", torch::Device device = torch::kCPU)
+   :_device(device), _nb_images(0), _image_resolution(image_resolution), _filter(filter)
     {
       unsigned int min = std::numeric_limits<unsigned int>::max();
       unsigned int max = std::numeric_limits<unsigned int>::min();
@@ -95,7 +95,7 @@ class Dataloader : public torch::data::datasets::BatchDataset<Dataloader, Triple
 	std::cout.flush();
 	_cache.push_back(std::vector<torch::Tensor>());
 	for (unsigned int j(0) ; j < files ; ++j)
-	  _cache.back().push_back(loadImage(_data[i][j], _image_resolution).cuda());
+	  _cache.back().push_back(loadImage(_data[i][j], _image_resolution).to(_device));
       }
     std::cout << std::endl;
   }
@@ -114,16 +114,16 @@ class Dataloader : public torch::data::datasets::BatchDataset<Dataloader, Triple
     {
       if (folder < _cache.size() && file < _cache[folder].size())
 	return _cache[folder][file];
-      return loadImage(_data[folder][file], size).cuda();
+      return loadImage(_data[folder][file], size).to(_device);
     }
 
   virtual Triplet get_batch(c10::ArrayRef<size_t> request)
   {
     unsigned int batch_size = request.size();
     Triplet res(batch_size);
-    res.anchor = torch::zeros({batch_size, 3, static_cast<long int>(_image_resolution), static_cast<long int>(_image_resolution)}).cuda();
-    res.same = torch::zeros({batch_size, 3, static_cast<long int>(_image_resolution), static_cast<long int>(_image_resolution)}).cuda();
-    res.diff = torch::zeros({batch_size, 3, static_cast<long int>(_image_resolution), static_cast<long int>(_image_resolution)}).cuda();
+    res.anchor = torch::zeros({batch_size, 3, static_cast<long int>(_image_resolution), static_cast<long int>(_image_resolution)}).to(_device);
+      res.same = torch::zeros({batch_size, 3, static_cast<long int>(_image_resolution), static_cast<long int>(_image_resolution)}).to(_device);
+    res.diff = torch::zeros({batch_size, 3, static_cast<long int>(_image_resolution), static_cast<long int>(_image_resolution)}).to(_device);
     unsigned int i(0);
     for (unsigned int _ : request)
       {
@@ -210,6 +210,7 @@ class Dataloader : public torch::data::datasets::BatchDataset<Dataloader, Triple
   }
 
 protected:
+  torch::Device _device;
   size_t _max_folder;
   size_t _max_file;
   size_t _nb_images;

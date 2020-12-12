@@ -32,10 +32,11 @@ int main(int ac, char **av)
   // No need for backprop in the visualisation
   torch::NoGradGuard no_grad;
 
-  Dataloader dataloader(av[2], 256);
+  torch::Device device(torch::kCUDA);
+  Dataloader dataloader(av[2], 256, "", device);
   FeatureExtractor model(32, Z);
   torch::load(model, av[1]);
-  model->to(at::kCUDA);
+  model->to(device);
   model->eval();
 
   // Run all images through the encoder

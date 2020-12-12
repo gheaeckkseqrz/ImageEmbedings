@@ -10,18 +10,18 @@
 constexpr unsigned int SAVE_EVERY = 1;
 constexpr float MARGIN = .9;
 
-float train(Dataminer &dataloader, FeatureExtractor &model, torch::optim::Adam &optimizer, float margin)
+float train(Dataminer &dataloader, FeatureExtractor &model, torch::optim::Adam &optimizer, float margin, torch::Device device)
 {
   unsigned int batch_size = 6;
   model->train();
   float total_loss = 0;
-  torch::Tensor reference_target = torch::zeros(std::vector<int64_t>({Z})).cuda();
+  torch::Tensor reference_target = torch::zeros(std::vector<int64_t>({Z})).to(device);
   reference_target[0] = .8;
-  torch::Tensor norm_target = torch::ones(std::vector<int64_t>({1})).cuda();
+  torch::Tensor norm_target = torch::ones(std::vector<int64_t>({1})).to(device);
   norm_target.fill_(torch::norm(reference_target).item<float>());
 
-  torch::Tensor label_pos = torch::zeros(std::vector<int64_t>({batch_size})).cuda();
-  torch::Tensor label_neg = torch::zeros(std::vector<int64_t>({batch_size})).cuda();
+  torch::Tensor label_pos = torch::zeros(std::vector<int64_t>({batch_size})).to(device);
+  torch::Tensor label_neg = torch::zeros(std::vector<int64_t>({batch_size})).to(device);
 
   label_pos.fill_( 1);
   label_neg.fill_(-1);
@@ -77,15 +77,18 @@ int main(int ac, char **av)
       return -1;
     }
 
-  Dataminer dataloader(Z, av[1], 256);
+  torch::Device device(torch::kCUDA);
+  Dataminer dataloader(Z, av[1], 256, "", device);
+  dataloader.setSampling(50);
   //dataloader.fillCache(200, 100);
   FeatureExtractor model(32, Z);
   //torch::load(model, "feature_extractor.pt");
-  model->to(at::kCUDA);
+  model->to(device);
   torch::optim::Adam optimizer(model->parameters(), 0.0001);
 
   // Get a couple of point for sampling
   std::cout << "Initial pass" << std::endl;
+  model->eval();
   for (unsigned int folder(0) ; folder < dataloader.nbIdentities() ; ++folder)
     {
       std::cout << "\r" << folder << " / " << dataloader.nbIdentities();
@@ -102,7 +105,7 @@ int main(int ac, char **av)
       for (unsigned int i(0) ; i  < SAVE_EVERY ; ++i)
 	{
 	  dataloader.updateIdEmbedings();
-	  float loss = train(dataloader, model, optimizer, MARGIN);
+	  float loss = train(dataloader, model, optimizer, MARGIN, device);
 	  std::cout << i << " -- " << loss << std::endl;
 	  loss_file << loss << std::endl;
 	}

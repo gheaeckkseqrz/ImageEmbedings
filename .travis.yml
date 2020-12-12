@@ -19,5 +19,4 @@ script:
      - cd build
      - cmake ..
      - make
-     - ./tests/TestDataloader
      - make test
