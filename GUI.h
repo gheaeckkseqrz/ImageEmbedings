@@ -179,8 +179,12 @@ private:
 	    texture.loadFromFile(item.path);
 	    sf::Vector2u size = texture.getSize();
 	    sprite.setTexture(texture);
-	    sprite.setScale(256.0 / size.x, 256.0 / size.y);
-	    sprite.setPosition(x, 0);
+	    sprite.setScale(250.0 / size.x, 250.0 / size.y);
+	    sprite.setPosition(x+3, 3);
+	    sf::RectangleShape border({256, 256});
+	    border.setFillColor(_colors[item.label]);
+	    border.setPosition(x, 0);
+	    _window.draw(border);
 	    _window.draw(sprite);
 	    x += 256;
 	  }
