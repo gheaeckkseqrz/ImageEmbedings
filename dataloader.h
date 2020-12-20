@@ -211,8 +211,8 @@ class Dataloader : public torch::data::datasets::BatchDataset<Dataloader, Triple
 
 protected:
   torch::Device _device;
-  size_t _max_folder;
-  size_t _max_file;
+  size_t _max_folder = std::numeric_limits<int>::max();
+  size_t _max_file = std::numeric_limits<int>::max();
   size_t _nb_images;
   size_t _image_resolution;
   std::string _filter;
