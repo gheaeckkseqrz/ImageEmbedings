@@ -7,8 +7,66 @@
 #include "dataminer.h"
 #include "z.h"
 
-constexpr unsigned int SAVE_EVERY = 1;
-constexpr float MARGIN = .5;
+constexpr unsigned int PRETRAIN_FOR = 1500;
+constexpr unsigned int SAVE_EVERY = 50;
+constexpr float MARGIN = .9;
+
+void pretrain(FeatureExtractor &model, Dataloader &dataloader, torch::Device device, unsigned int epochs)
+{
+  unsigned int nbIdentities = std::min(static_cast<unsigned int>(dataloader.nbIdentities()), 1024u);
+  unsigned int batch_size = std::min(12u, nbIdentities / 2);
+
+  dataloader.setLimits(1000, nbIdentities);
+  torch::nn::Sequential m(model,
+			  torch::nn::Linear(Z, 2000),
+			  torch::nn::ReLU(),
+			  torch::nn::Linear(2000, 2000),
+			  torch::nn::ReLU(),
+			  torch::nn::Linear(2000, nbIdentities));
+  std::cout << "Pretrain\n" << m << std::endl;
+  m->to(device);
+  torch::optim::Adam optimizer(m->parameters(), 1e-5);
+  m->train();
+
+  std::ofstream pretrain_loss_file("pretrain_loss.txt");
+  for (unsigned int epoch(0) ; epoch < epochs ; ++ epoch)
+  {
+    auto start = std::chrono::high_resolution_clock::now();
+    auto data_loader = torch::data::make_data_loader<torch::data::samplers::RandomSampler>(dataloader, torch::data::DataLoaderOptions().batch_size(batch_size).workers(5));
+    unsigned int b(0);
+    float total_loss(0);
+    unsigned int accuracy(0);
+    unsigned int total(0);
+    for (Triplet &training_triplet : *data_loader)
+    {
+      if (training_triplet.anchor_folder_index.sizes()[0] != batch_size)
+	break; // Drop Last
+      optimizer.zero_grad();
+
+      torch::Tensor pred = m->forward(training_triplet.anchor);
+      pred = torch::log_softmax(pred, 1);
+
+      std::tuple<at::Tensor, at::Tensor> max = torch::max(pred, 1);
+
+
+      for (unsigned int b(0) ; b < batch_size ; b++)
+	if (std::get<1>(max)[b].item<int>() == training_triplet.anchor_folder_index[b].item<int>())
+	  accuracy++;
+      total += batch_size;
+
+      torch::Tensor loss = torch::nn::functional::nll_loss(pred, training_triplet.anchor_folder_index.cuda());
+      total_loss += loss.item<float>();
+      loss.backward();
+      optimizer.step();
+    }
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(stop - start);
+    std::cout << "Pretrain " << epoch << " / " << epochs << " -- Duration : " << duration.count() << " seconds -- " << total_loss << " -- Top 1 Accuracy : " << accuracy << " / " << total << std::endl;
+    pretrain_loss_file << total_loss << std::endl;
+    if (epoch % 100 == 0)
+      torch::save(model, "feature_extractor.pt");
+  }
+}
 
 std::pair<float, float> evaluate(Dataloader const &dataloader, FeatureExtractor &model, float margin, torch::Device device)
 {
@@ -54,7 +112,7 @@ float train(Dataminer &dataloader, FeatureExtractor &model, torch::optim::Adam &
   label_neg.fill_(-1);
 
   auto start = std::chrono::high_resolution_clock::now();
-  auto data_loader = torch::data::make_data_loader<torch::data::samplers::SequentialSampler>(dataloader, torch::data::DataLoaderOptions().batch_size(batch_size).workers(5));
+  auto data_loader = torch::data::make_data_loader<torch::data::samplers::RandomSampler>(dataloader, torch::data::DataLoaderOptions().batch_size(batch_size).workers(5));
   unsigned int b(0);
   for (Triplet &training_triplet : *data_loader)
     {
@@ -62,7 +120,7 @@ float train(Dataminer &dataloader, FeatureExtractor &model, torch::optim::Adam &
 	break; // Drop Last
 
       optimizer.zero_grad();
-      torch::Tensor anchor_code = model->forward(training_triplet.anchor);
+      torch::Tensor anchor_code = model->forward(training_triplet.anchor).detach();
       torch::Tensor same_code = model->forward(training_triplet.same);
       torch::Tensor diff_code = model->forward(training_triplet.diff);
 
@@ -82,7 +140,7 @@ float train(Dataminer &dataloader, FeatureExtractor &model, torch::optim::Adam &
       torch::Tensor loss_norm_diff = torch::mean(torch::relu(norm_diff - 0.8));
       torch::Tensor loss_norm = (loss_norm_same + loss_norm_diff);
 
-      torch::Tensor loss = loss_same + loss_diff + loss_norm;
+      torch::Tensor loss = loss_same + loss_diff; //  + loss_norm;
       std::cout << "\r" << b << " / " << dataloader.nbIdentities() / batch_size << " -- " << loss.item<float>();
       std::cout.flush();
       b++;
@@ -115,7 +173,8 @@ int main(int ac, char **av)
   std::cout << model << std::endl;
   // torch::load(model, "feature_extractor.pt");
   model->to(device);
-  torch::optim::Adam optimizer(model->parameters(), 1e-4);
+  pretrain(model, train_dataloader, device, PRETRAIN_FOR);
+  torch::optim::Adam optimizer(model->parameters(), 1e-5);
 
   // Get a couple of point for sampling
   std::cout << "Initial pass" << std::endl;
@@ -136,7 +195,6 @@ int main(int ac, char **av)
   unsigned int epoch(0);
   while (true)
     {
-      train_dataloader.setLimits(50, epoch);
       for (unsigned int i(0) ; i  < SAVE_EVERY ; ++i)
 	{
 	  train_dataloader.updateIdEmbedings();
