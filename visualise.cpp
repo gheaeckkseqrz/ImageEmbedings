@@ -10,7 +10,7 @@
 #include "GUI.h"
 #include "tsne.h"
 
-#define SAMPLE_PER_CLASS 10
+#define SAMPLE_PER_CLASS 100u
 
 torch::Tensor tsne(torch::Tensor tsneInput)
 {
@@ -23,16 +23,35 @@ torch::Tensor tsne(torch::Tensor tsneInput)
   return tsneOutput;
 }
 
+struct Options : public GUIDelegate
+{
+public:
+  virtual void increaseFileLimit() { file_limit++; };
+  virtual void decreaseFileLimit() { file_limit--; };
+  virtual void increaseFolderLimit() { folder_limit++; };
+  virtual void decreaseFolderLimit() { folder_limit--; };
+  virtual void increaseMargin() {};
+  virtual void decreaseMargin() {};
+  virtual void increaseSampling() {};
+  virtual void decreaseSampling() {};
+  virtual void increaseDisplayEvery() {};
+  virtual void decreaseDisplayEvery() {};
+
+  unsigned int file_limit = 100;
+  unsigned int folder_limit = 500;
+};
+
 int main(int ac, char **av)
 {
   if (ac != 3)
-    {
-      std::cout << "Usage: " << av[0] << " CHECKPOINT DATA_ROOT" << std::endl;
-      return -1;
-    }
+  {
+    std::cout << "Usage: " << av[0] << " CHECKPOINT DATA_ROOT" << std::endl;
+    return -1;
+  }
 
   // Display Results
-  GUI ui;
+  Options options;
+  GUI ui(&options);
   ui.start();
 
   // No need for backprop in the visualisation
@@ -40,50 +59,59 @@ int main(int ac, char **av)
 
   torch::Device device(torch::kCUDA);
   Dataloader dataloader(av[2], 256, "", device);
-  dataloader.fillCache(6, 12);
-  FeatureExtractor model(32, Z);
+  // dataloader.fillCache(7, 12);
+  FeatureExtractor model(NC, Z);
 
+  auto ftime = fs::last_write_time(av[1]);
+  torch::Tensor codes = torch::zeros({dataloader.nbIdentities() * SAMPLE_PER_CLASS, Z});
+  torch::Tensor projection = torch::zeros({dataloader.nbIdentities() * SAMPLE_PER_CLASS, 2});
   while (true)
   {
-    auto ftime = fs::last_write_time(av[1]);
-    torch::load(model, av[1]);
-    model->to(device);
-    model->eval();
-
-    // Run all images through the encoder
-    unsigned int i(0);
-    torch::Tensor codes = torch::zeros({dataloader.nbIdentities() * SAMPLE_PER_CLASS, Z});
-    for (unsigned int identity(0) ; identity < dataloader.nbIdentities() ; ++identity)
+    try
     {
-      for (unsigned int image(0) ; image < SAMPLE_PER_CLASS ; ++image)
+      torch::load(model, av[1]);
+      ftime = fs::last_write_time(av[1]);
+
+
+      model->to(device);
+      model->eval();
+
+      // Run all images through the encoder
+      unsigned int i(0);
+      for (unsigned int identity(0) ; identity < dataloader.nbIdentities() ; ++identity)
       {
-	torch::Tensor input = dataloader.getImage(identity, image);
-	torch::Tensor code = model->forward(input.unsqueeze(0));
-	codes[i].copy_(torch::nn::functional::normalize(code)[0]);
-	i++;
-	std::string path = dataloader.getPath(identity, image);
+	for (unsigned int image(0) ; image < SAMPLE_PER_CLASS ; ++image)
+	{
+	  torch::Tensor input = dataloader.getImage(identity, image);
+	  torch::Tensor code = model->forward(input.unsqueeze(0));
+	  // codes[i].copy_(torch::nn::functional::normalize(code)[0]);
+	  codes[i].copy_(code[0]);
+	  i++;
+	}
       }
+      // Perform TSNE dimentionality reduction
+      projection = (Z > 2) ? tsne(codes) : codes.clone();
+    }
+    catch (c10::Error const &e)
+    {
     }
 
-    // Perform TSNE dimentionality reduction
-    torch::Tensor projection = (Z > 2) ? tsne(codes) : codes.clone();
-
-    unsigned int j(0);
-    for (unsigned int identity(0) ; identity < dataloader.nbIdentities() ; ++identity)
+    do
     {
-      for (unsigned int image(0) ; image < SAMPLE_PER_CLASS ; ++image)
+      unsigned int identity_limit = std::min(options.folder_limit, static_cast<unsigned int>(dataloader.nbIdentities()));
+      for (unsigned int identity(0) ; identity < identity_limit ; ++identity)
       {
-	float x = projection[j][0].item<float>();
-	float y = projection[j][1].item<float>();
-	ui.addPoint(x, y, identity, dataloader.getPath(identity, image));
-	j++;
+	unsigned int image_limit = std::min(std::min(SAMPLE_PER_CLASS, options.file_limit), static_cast<unsigned int>(dataloader.identitySize(identity)));
+	for (unsigned int image(0) ; image < image_limit ; ++image)
+	{
+	  float x = projection[identity * SAMPLE_PER_CLASS + image][0].item<float>();
+	  float y = projection[identity * SAMPLE_PER_CLASS + image][1].item<float>();
+	  ui.addPoint(x, y, identity, dataloader.getPath(identity, image));
+	}
       }
-    }
-    ui.update();
-
-    while (ftime == fs::last_write_time(av[1]))
-      std::this_thread::sleep_for(std::chrono::seconds(1));
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+      ui.update();
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }  while (ftime == fs::last_write_time(av[1]));
     std::cout << "Refresh!" << std::endl;
   }
   return 0;
