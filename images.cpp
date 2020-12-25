@@ -17,12 +17,9 @@ torch::Tensor loadImage(std::string const &path, unsigned int size)
     std::cout <<  "Could not open or find the image [" << path << "]" << std::endl ;
   if (size != (unsigned int)-1)
     cv::resize(image, image, cv::Size(size, size), 0, 0, cv::INTER_LINEAR);
-  if (rand() % 2)
-    cv::flip(image, image, 1);
   cv::Mat image_float;
   image.convertTo(image_float, CV_32F);
   torch::Tensor t = torch::from_blob(image_float.data, {image.rows, image.cols, 3});
   t.transpose_(2, 0);
   return t / 255;
 }
-
