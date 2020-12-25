@@ -63,8 +63,8 @@ int main(int ac, char **av)
   FeatureExtractor model(Hyperparameters::NC, Hyperparameters::Z);
 
   auto ftime = fs::last_write_time(av[1]);
-  torch::Tensor codes = torch::zeros({dataloader.nbIdentities() * SAMPLE_PER_CLASS, Hyperparameters::Z});
-  torch::Tensor projection = torch::zeros({dataloader.nbIdentities() * SAMPLE_PER_CLASS, 2});
+  torch::Tensor codes = torch::zeros({static_cast<unsigned int>(dataloader.nbIdentities()) * SAMPLE_PER_CLASS, Hyperparameters::Z});
+  torch::Tensor projection = torch::zeros({static_cast<unsigned int>(dataloader.nbIdentities()) * SAMPLE_PER_CLASS, 2});
   while (true)
   {
     try

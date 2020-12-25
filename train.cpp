@@ -75,7 +75,7 @@ std::pair<float, float> evaluate(Dataloader const &dataloader, FeatureExtractor 
   float total_var_loss = 0;
   float total_margin_loss = 0;
 
-  torch::Tensor identity_codes = torch::zeros({dataloader.nbIdentities(), Hyperparameters::Z});
+  torch::Tensor identity_codes = torch::zeros({static_cast<unsigned int>(dataloader.nbIdentities()), Hyperparameters::Z});
   for (unsigned int i(0) ; i < dataloader.nbIdentities() ; ++i)
   {
     unsigned int identity_size = std::min(size_t(12), dataloader.identitySize(i));
@@ -175,7 +175,7 @@ int main(int ac, char **av)
   std::ofstream variance_loss_file("variance_loss.txt");
   std::ofstream margin_loss_file("margin_loss.txt");
   unsigned int epoch(0);
-  while (true)
+  while (epoch < 10)
     {
       for (unsigned int i(0) ; i  < SAVE_EVERY ; ++i)
 	{
