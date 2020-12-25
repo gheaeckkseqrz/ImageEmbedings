@@ -18,7 +18,7 @@ torch::Tensor tsne(torch::Tensor tsneInput)
   torch::Tensor tsneOutput = torch::zeros({N, 2u}, torch::kDouble);
 
   tsneInput = tsneInput.to(torch::kDouble);
-  TSNE::run(tsneInput.data_ptr<double>(), N, Z, tsneOutput.data_ptr<double>(), 2, 50, .5, -1, false, 1000, 250, 250);
+  TSNE::run(tsneInput.data_ptr<double>(), N, Hyperparameters::Z, tsneOutput.data_ptr<double>(), 2, 50, .5, -1, false, 1000, 250, 250);
 
   return tsneOutput;
 }
@@ -60,10 +60,10 @@ int main(int ac, char **av)
   torch::Device device(torch::kCUDA);
   Dataloader dataloader(av[2], 256, "", device);
   // dataloader.fillCache(7, 12);
-  FeatureExtractor model(NC, Z);
+  FeatureExtractor model(Hyperparameters::NC, Hyperparameters::Z);
 
   auto ftime = fs::last_write_time(av[1]);
-  torch::Tensor codes = torch::zeros({dataloader.nbIdentities() * SAMPLE_PER_CLASS, Z});
+  torch::Tensor codes = torch::zeros({dataloader.nbIdentities() * SAMPLE_PER_CLASS, Hyperparameters::Z});
   torch::Tensor projection = torch::zeros({dataloader.nbIdentities() * SAMPLE_PER_CLASS, 2});
   while (true)
   {
@@ -90,7 +90,7 @@ int main(int ac, char **av)
 	}
       }
       // Perform TSNE dimentionality reduction
-      projection = (Z > 2) ? tsne(codes) : codes.clone();
+      projection = (Hyperparameters::Z > 2) ? tsne(codes) : codes.clone();
     }
     catch (c10::Error const &e)
     {

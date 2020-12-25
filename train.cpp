@@ -7,7 +7,7 @@
 #include "dataminer.h"
 #include "hyperparameters.h"
 
-constexpr unsigned int PRETRAIN_FOR = 0;
+
 constexpr unsigned int SAVE_EVERY = 100;
 constexpr float MARGIN = .9;
 
@@ -18,14 +18,14 @@ void pretrain(FeatureExtractor &model, Dataloader &dataloader, torch::Device dev
 
   dataloader.setLimits(1000, nbIdentities);
   torch::nn::Sequential m(model,
-			  torch::nn::Linear(Z, 2000),
+			  torch::nn::Linear(Hyperparameters::Z, 2000),
 			  torch::nn::ReLU(),
 			  torch::nn::Linear(2000, 2000),
 			  torch::nn::ReLU(),
 			  torch::nn::Linear(2000, nbIdentities));
   std::cout << "Pretrain\n" << m << std::endl;
   m->to(device);
-  torch::optim::Adam optimizer(m->parameters(), 1e-5);
+  torch::optim::Adam optimizer(m->parameters(), Hyperparameters::PRETRAIN_LR);
   m->train();
 
   std::ofstream pretrain_loss_file("pretrain_loss.txt");
@@ -75,11 +75,11 @@ std::pair<float, float> evaluate(Dataloader const &dataloader, FeatureExtractor 
   float total_var_loss = 0;
   float total_margin_loss = 0;
 
-  torch::Tensor identity_codes = torch::zeros({dataloader.nbIdentities(), Z});
+  torch::Tensor identity_codes = torch::zeros({dataloader.nbIdentities(), Hyperparameters::Z});
   for (unsigned int i(0) ; i < dataloader.nbIdentities() ; ++i)
   {
     unsigned int identity_size = std::min(size_t(12), dataloader.identitySize(i));
-    torch::Tensor codes = torch::zeros({identity_size, Z}).to(device);
+    torch::Tensor codes = torch::zeros({identity_size, Hyperparameters::Z}).to(device);
     for (unsigned int j(0) ; j < identity_size ; ++j)
     {
       torch::Tensor input = dataloader.getImage(i, j).unsqueeze(0);
@@ -108,7 +108,7 @@ float train(Dataminer &dataloader, FeatureExtractor &model, torch::optim::Adam &
   label_pos.fill_( 1);
   label_neg.fill_(-1);
 
-  torch::Tensor reference = torch::zeros(std::vector<int64_t>({Z})).to(device);
+  torch::Tensor reference = torch::zeros(std::vector<int64_t>({Hyperparameters::Z})).to(device);
   reference[0] = 1;
 
   auto start = std::chrono::high_resolution_clock::now();
@@ -160,16 +160,16 @@ int main(int ac, char **av)
     }
 
   torch::Device device(torch::kCUDA);
-  Dataminer train_dataloader(Z, av[1], 256, "", device);
+  Dataminer train_dataloader(Hyperparameters::Z, av[1], 256, "", device);
   Dataloader test_dataloader(av[2], 256, "", device);
   train_dataloader.setSampling(0);
   train_dataloader.fillCache(7, 12);
   test_dataloader.fillCache(7, 12);
-  FeatureExtractor model(NC, Z);
+  FeatureExtractor model(Hyperparameters::NC, Hyperparameters::Z);
   std::cout << model << std::endl;
   model->to(device);
-  pretrain(model, train_dataloader, device, PRETRAIN_FOR);
-  torch::optim::Adam optimizer(model->parameters(), 1e-4);
+  pretrain(model, train_dataloader, device, Hyperparameters::PRETRAIN_FOR);
+  torch::optim::Adam optimizer(model->parameters(), Hyperparameters::TRAIN_LR);
 
   std::ofstream train_loss_file("train_loss.txt");
   std::ofstream variance_loss_file("variance_loss.txt");
