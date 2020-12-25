@@ -26,7 +26,7 @@ struct ResidualBlockImpl : torch::nn::Module
       x = torch::dropout(x, 0.2, is_training());
       x = _n3(torch::relu(_c3(x)));
       x = torch::dropout(x, 0.2, is_training());
-      x = _n4(torch::relu(_c4(x)));
+      x = _n4(_c4(x));
       return x + base;
     }
 
