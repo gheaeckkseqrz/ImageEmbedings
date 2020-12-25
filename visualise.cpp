@@ -5,7 +5,7 @@
 
 #include "feature_extractor.h"
 #include "dataloader.h"
-#include "z.h"
+#include "hyperparameters.h"
 
 #include "GUI.h"
 #include "tsne.h"

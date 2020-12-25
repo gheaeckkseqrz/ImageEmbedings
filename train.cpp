@@ -5,7 +5,7 @@
 
 #include "feature_extractor.h"
 #include "dataminer.h"
-#include "z.h"
+#include "hyperparameters.h"
 
 constexpr unsigned int PRETRAIN_FOR = 0;
 constexpr unsigned int SAVE_EVERY = 100;
