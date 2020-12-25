@@ -34,7 +34,7 @@ class GUI
 {
 public:
   GUI(GUIDelegate * delegate = nullptr)
-    :_delegate(delegate), _max(1), _radius(5)
+    :_delegate(delegate), _max(0), _radius(5)
   {
     _colors.push_back({0,     0, 255});
     _colors.push_back({0,   255,   0});
@@ -81,7 +81,7 @@ public:
     }
     _pointsActive.swap(_pointsNext);
     _pointsNext.clear();
-    _max = 1;
+    _max = 0;
   }
 
   void showTriplet(std::string const &a, std::string const &s, std::string const &d)
@@ -167,9 +167,10 @@ private:
 	  item.y *= 1000;
 	  item.x += 1000;
 	  item.y += 1000;
+
 	  sf::CircleShape shape(5.f);
 	  shape.setFillColor(_colors[item.label]);
-	  shape.setPosition(item.x - 5, item.y / _max - 5);
+	  shape.setPosition(item.x - 5, item.y - 5);
 	  if (std::pow(item.x - mouse.x, 2) + std::pow(item.y - mouse.y, 2) < _radius * _radius)
 	  {
 	    shape.setOutlineThickness(2.f);
